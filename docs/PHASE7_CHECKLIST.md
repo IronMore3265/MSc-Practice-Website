@@ -15,7 +15,7 @@ The database logic is covered by an automated test. The editor was driven in the
 
 - `npm test` in `app`: 56 tests. New ones cover the dollar sign format (parse and write rows, inline math, escaped dollars), the problem grade checks (row numbers, pages, figures, score range, first wrong row), the problem prompt, and the reading prompt.
 - `supabase/tests/phase7.sql`: paste it into the Supabase SQL editor and run it. The last result must read `ALL PHASE 7 TESTS PASSED`. Everything rolls back.
-- `supabase/tests/phase5.sql` and `phase6.sql`: two functions they use were replaced (`start_cq_session`, `get_cq_session`). Run both once, each must still end with its ALL PASSED line.
+- `supabase/tests/phase5.sql` and `phase6.sql`: two functions they use were replaced (`start_cq_session`, `get_cq_session`). I re-ran both on the live project after this migration and both end with their ALL PASSED line.
 
 ## Checklist
 
