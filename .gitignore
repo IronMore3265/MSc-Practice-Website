@@ -1,0 +1,17 @@
+# secrets and env
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# course material and student data
+*.pdf
+import-tool/output/
+import-tool/data/
+
+# misc
+.DS_Store
+.vercel
+node_modules
