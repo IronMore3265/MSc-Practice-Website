@@ -1,0 +1,419 @@
+/* RoboNuggets style, plan section 11. Only these colors. Orange is for emphasis. */
+:root {
+  --bg: #f2efe8;
+  --ink: #1c1a16;
+  --muted: #6f6a5c;
+  --orange: #ff6b1a;
+  --card: #faf8f2;
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* Layout */
+.shell {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 28px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 100vh;
+}
+
+.shell-wide {
+  max-width: 820px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.grow {
+  flex: 1;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Type */
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.label-orange {
+  color: var(--orange);
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.heading {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.accent {
+  font-family: var(--font-doto), monospace;
+  font-weight: 900;
+  color: var(--orange);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+.footer {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+/* Surfaces */
+.card {
+  background: var(--card);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.card-shadow {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.card-orange {
+  background: var(--card);
+  border: 2px solid var(--orange);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: 8px 8px 0 var(--orange);
+}
+
+.dashed {
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  background: transparent;
+}
+
+/* Form controls */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input,
+.select {
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  box-shadow: 6px 6px 0 var(--ink);
+  outline: none;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--orange);
+}
+
+.input-sm {
+  padding: 7px 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 14px;
+}
+
+.field-box {
+  /* leaves room for the hard shadow */
+  padding-right: 6px;
+  padding-bottom: 6px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.btn:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.btn-primary {
+  background: var(--orange);
+}
+
+.btn-ink {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  color: var(--muted);
+}
+
+/* Pills and chips */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 4px 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pill-active,
+.pill[aria-current="page"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.chip {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 2px 7px;
+  background: var(--card);
+}
+
+.chip-done {
+  background: var(--ink);
+  color: var(--orange);
+}
+
+.chip-now {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+.chip-muted {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+/* Lists */
+.rows > * + * {
+  border-top: 1px dashed var(--muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.row-link {
+  text-decoration: none;
+}
+
+.row-link:hover .row-name {
+  text-decoration: underline;
+}
+
+.row-name {
+  font-weight: 600;
+}
+
+.exam-selected {
+  background: var(--orange);
+  border-radius: var(--radius);
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Messages */
+.form-msg {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.form-msg[data-ok="false"] {
+  color: var(--orange);
+}
+
+.form-msg[data-ok="true"] {
+  color: var(--ink);
+}
+
+/* Tables on wide screens collapse to stacked rows on phones */
+.student {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.inline-form .field {
+  width: 120px;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 3px 12px;
+  background: var(--card);
+  cursor: pointer;
+}
+
+.check input {
+  accent-color: var(--ink);
+}
+
+.code {
+  font-family: var(--font-doto), monospace;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 520px) {
+  .title {
+    font-size: 30px;
+  }
+  .input-sm {
+    width: 100%;
+  }
+  .inline-form .field {
+    width: 100%;
+  }
+}
