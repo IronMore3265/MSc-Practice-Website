@@ -17,7 +17,8 @@ Exam practice website for Nabil and friends (BUET IPE). Read `docs/PLAN.md` firs
 - Figures are 1:1 copies extracted from the PDF, never redrawn.
 - Schema changes are SQL migrations in `supabase/migrations/`, committed to the repo.
 - UI follows plan section 11 (RoboNuggets style: cream background, orange question shadow, black option shadow, dashed explanation box). No em dashes in any UI text.
-- One branch and pull request per feature. Do not push to `main` directly.
+- Single branch: `main` is the only branch. Commit and push to it directly. No feature branches or pull requests unless Nabil asks for one.
+- Never add Claude as a co-author or add attribution lines to commits or pull requests. Commits carry Nabil's name only.
 - At the end of each phase, stop and list what Nabil should verify by hand.
 
 ## Environment variables
