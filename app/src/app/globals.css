@@ -459,3 +459,221 @@ p {
 .opt-row .check {
   margin-top: 4px;
 }
+
+/* Practice (Phase 4): home pickers, MCQ player, results. Plan section 11. */
+.shell-practice {
+  max-width: 640px;
+}
+
+.pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+:is(.btn, .pill, .opt, .exam-card, .segment):focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 2px;
+}
+
+/* Exam cards: ink border and black shadow, the selected card is orange and pressed */
+.exam-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: calc(100% - 6px);
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  box-shadow: 6px 6px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.exam-card:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.exam-card-sub {
+  display: block;
+  color: var(--muted);
+}
+
+.exam-card-on,
+.exam-card-on:hover {
+  background: var(--orange);
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.exam-card-on .exam-card-sub {
+  color: var(--ink);
+}
+
+/* Timer pill: black with orange digits */
+.timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.timer-pill b {
+  color: var(--orange);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-low {
+  background: var(--orange);
+  color: var(--ink);
+}
+
+.timer-low b {
+  color: var(--ink);
+}
+
+/* Progress segments: orange = right, black = wrong, empty = open */
+.segments {
+  display: flex;
+  gap: 4px;
+}
+
+.segment {
+  flex: 1;
+  height: 12px;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.segment-right {
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.segment-wrong {
+  background: var(--ink);
+}
+
+.segment-current {
+  box-shadow: 0 3px 0 var(--ink);
+}
+
+.q-text {
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: pre-line;
+}
+
+/* MCQ option cards: ink border, black shadow. Right is orange, wrong is black, both pressed. */
+.opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: calc(100% - 6px);
+  text-align: left;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  box-shadow: 6px 6px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.opt:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.opt:disabled {
+  cursor: default;
+  color: var(--ink);
+}
+
+.opt-letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.opt-text {
+  padding-top: 2px;
+  white-space: pre-line;
+}
+
+.opt.opt-correct {
+  background: var(--orange);
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.opt.opt-wrong {
+  background: var(--ink);
+  color: var(--bg);
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.opt.opt-dim {
+  opacity: 0.55;
+}
+
+/* Results */
+.score-big {
+  font-family: var(--font-doto), monospace;
+  font-weight: 900;
+  font-size: 56px;
+  line-height: 1;
+  color: var(--orange);
+}
+
+.score-of {
+  color: var(--muted);
+  font-size: 32px;
+}
+
+.bar {
+  height: 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: var(--card);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--orange);
+}
+
+.review-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}

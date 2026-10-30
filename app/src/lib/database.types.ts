@@ -641,6 +641,172 @@ export type Database = {
           },
         ];
       };
+      session_run: {
+        Row: {
+          chapter_ids: string[];
+          exam_id: string;
+          finished_at: string | null;
+          id: string;
+          max_score: number | null;
+          mcq_deadline_at: string | null;
+          retry_of: string | null;
+          score: number | null;
+          sections: string[];
+          set_id: string | null;
+          started_at: string;
+          timed_out: boolean;
+          user_id: string;
+        };
+        Insert: {
+          chapter_ids?: string[];
+          exam_id: string;
+          finished_at?: string | null;
+          id?: string;
+          max_score?: number | null;
+          mcq_deadline_at?: string | null;
+          retry_of?: string | null;
+          score?: number | null;
+          sections?: string[];
+          set_id?: string | null;
+          started_at?: string;
+          timed_out?: boolean;
+          user_id: string;
+        };
+        Update: {
+          chapter_ids?: string[];
+          exam_id?: string;
+          finished_at?: string | null;
+          id?: string;
+          max_score?: number | null;
+          mcq_deadline_at?: string | null;
+          retry_of?: string | null;
+          score?: number | null;
+          sections?: string[];
+          set_id?: string | null;
+          started_at?: string;
+          timed_out?: boolean;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "session_run_exam_id_fkey";
+            columns: ["exam_id"];
+            isOneToOne: false;
+            referencedRelation: "exam";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "session_run_retry_of_fkey";
+            columns: ["retry_of"];
+            isOneToOne: false;
+            referencedRelation: "session_run";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "session_run_set_id_fkey";
+            columns: ["set_id"];
+            isOneToOne: false;
+            referencedRelation: "question_set";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "session_run_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profile";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      attempt: {
+        Row: {
+          answered_at: string | null;
+          id: string;
+          is_correct: boolean | null;
+          position: number;
+          question_id: string;
+          score: number;
+          seconds_spent: number | null;
+          selected_option_id: string | null;
+          session_run_id: string;
+          user_id: string;
+        };
+        Insert: {
+          answered_at?: string | null;
+          id?: string;
+          is_correct?: boolean | null;
+          position: number;
+          question_id: string;
+          score?: number;
+          seconds_spent?: number | null;
+          selected_option_id?: string | null;
+          session_run_id: string;
+          user_id: string;
+        };
+        Update: {
+          answered_at?: string | null;
+          id?: string;
+          is_correct?: boolean | null;
+          position?: number;
+          question_id?: string;
+          score?: number;
+          seconds_spent?: number | null;
+          selected_option_id?: string | null;
+          session_run_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "attempt_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: false;
+            referencedRelation: "question";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "attempt_selected_option_id_fkey";
+            columns: ["selected_option_id"];
+            isOneToOne: false;
+            referencedRelation: "mcq_option";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "attempt_session_run_id_fkey";
+            columns: ["session_run_id"];
+            isOneToOne: false;
+            referencedRelation: "session_run";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "attempt_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profile";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      question_report: {
+        Row: { created_at: string; id: string; note: string | null; question_id: string; user_id: string };
+        Insert: { created_at?: string; id?: string; note?: string | null; question_id: string; user_id: string };
+        Update: { created_at?: string; id?: string; note?: string | null; question_id?: string; user_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "question_report_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: false;
+            referencedRelation: "question";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "question_report_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profile";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -673,6 +839,13 @@ export type Database = {
         Args: { p_code: string; p_email: string; p_name: string; p_user_id: string };
         Returns: undefined;
       };
+      start_mcq_session: {
+        Args: { p_set_id: string; p_chapter_ids?: string[]; p_retry_of?: string };
+        Returns: string;
+      };
+      get_session: { Args: { p_session: string }; Returns: Json };
+      answer_mcq: { Args: { p_option: string; p_question: string; p_session: string }; Returns: Json };
+      finish_mcq_session: { Args: { p_session: string }; Returns: Json };
     };
     Enums: {
       exam_format: "mcq" | "cq" | "both";

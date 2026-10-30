@@ -3,7 +3,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { JobWatcher } from "@/components/JobWatcher";
 import { MAX_GENERATE_COUNT } from "@/lib/ai/generation";
 import { createClient } from "@/lib/supabase/server";
-import { deleteQuestion, generateQuestions, retryJob, setQuestionStatus } from "./actions";
+import { clearReports, deleteQuestion, generateQuestions, retryJob, setQuestionStatus } from "./actions";
 
 type SearchParams = Promise<{ course?: string; chapter?: string; kind?: string; status?: string; job?: string }>;
 
@@ -31,7 +31,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Se
 
   let query = supabase
     .from("question")
-    .select("*, chapter(number), mcq_option(label, text, is_correct, explanation)")
+    .select("*, chapter(number), mcq_option(label, text, is_correct, explanation), question_report(note, created_at)")
     .eq("course_id", course.id)
     .order("created_at", { ascending: false })
     .limit(LIMIT);
@@ -186,6 +186,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Se
               <div className="wrap">
                 <span className="chip">{KIND_LABEL[q.kind]}</span>
                 {q.origin === "ai" ? <span className="chip chip-now">AI</span> : null}
+                {q.question_report.length > 0 ? <span className="chip chip-now">Reported {q.question_report.length}</span> : null}
                 <span className={`chip ${q.status === "approved" ? "chip-done" : "chip-muted"}`}>{q.status}</span>
                 <span className="small muted">
                   Ch {chapterNumber.get(q.chapter_id) ?? "?"}
@@ -193,6 +194,17 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Se
                 </span>
               </div>
               <p>{q.text}</p>
+              {q.question_report.length > 0 ? (
+                <div className="dashed stack-sm">
+                  <p className="label label-orange">Reported by students</p>
+                  {q.question_report.map((r) => (
+                    <p key={r.created_at} className="small">{r.note ?? "No note."}</p>
+                  ))}
+                  <ActionForm action={clearReports} submitLabel="Clear reports" buttonClass="btn btn-small" className="wrap">
+                    <input type="hidden" name="id" value={q.id} />
+                  </ActionForm>
+                </div>
+              ) : null}
               {options.length > 0 || q.answer_notes ? (
                 <details>
                   <summary className="label" style={{ cursor: "pointer" }}>{options.length ? "Options and answer" : "Key points"}</summary>

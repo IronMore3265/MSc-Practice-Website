@@ -122,6 +122,17 @@ export async function deleteQuestion(_prev: ActionState, form: FormData): Promis
   return done("Deleted.");
 }
 
+// Students flag questions with "Report question". After fixing (or ignoring) one, the admin clears its flags.
+export async function clearReports(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const id = text(form, "id", 40);
+  const supabase = await createClient();
+  const { error } = await supabase.from("question_report").delete().eq("question_id", id);
+  if (error) return bad("Could not clear the reports.");
+  revalidatePath("/admin/questions");
+  return done("Cleared.");
+}
+
 // Queues question generation. The job runs through the router (Gemini keys, models and pacing come from configuration).
 export async function generateQuestions(_prev: ActionState, form: FormData): Promise<ActionState> {
   const { profile } = await requireAdmin();
