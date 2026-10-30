@@ -2,10 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { setLabel, setsForPick } from "@/lib/practice";
 
 export type SetView = {
   id: string;
   name: string;
+  // Set for one chapter only ("Ch 1 Set 2"), or null for a whole-exam set ("Set 2").
+  chapterId: string | null;
   mcqByChapter: Record<string, number>;
   cqByChapter: Record<string, number>;
   attempts: number;
@@ -54,8 +57,9 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
   const allIds = exam ? exam.chapters.map((c) => c.id) : [];
   const picked = exam ? (chapterPick[exam.id] ?? allIds) : [];
   const allPicked = picked.length === allIds.length;
-  // Default set: the first one you have not tried yet, else Set 1.
-  const set = exam ? (exam.sets.find((s) => s.id === setPick[exam.id]) ?? exam.sets.find((s) => s.attempts === 0) ?? exam.sets[0]) : undefined;
+  const sets = exam ? setsForPick(exam.sets, picked, allPicked) : [];
+  // Default set: the first one you have not tried yet, else the first one.
+  const set = exam ? (sets.find((s) => s.id === setPick[exam.id]) ?? sets.find((s) => s.attempts === 0) ?? sets[0]) : undefined;
   // An MCQ-only or CQ-only exam has one section. An exam with both lets you pick, MCQ first.
   const section: Section = exam ? (exam.format === "cq" ? "cq" : exam.format === "mcq" ? "mcq" : (sectionPick[exam.id] ?? "mcq")) : "mcq";
   const counts = set ? (section === "cq" ? set.cqByChapter : set.mcqByChapter) : {};
@@ -75,7 +79,13 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
     setBusy("new");
     setError(null);
     try {
-      const res = await fetch(`/api/exams/${exam.id}/sets`, { method: "POST" });
+      // With one chapter picked, the new set is for that chapter only.
+      const chapterId = !allPicked && picked.length === 1 ? picked[0] : undefined;
+      const res = await fetch(`/api/exams/${exam.id}/sets`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chapter_id: chapterId }),
+      });
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !data.id) {
         setError(data.error ?? "Could not create a set.");
@@ -215,7 +225,7 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
               <span className="label-orange">{exam.format === "both" ? 5 : 4}</span> Set
             </p>
             <div className="wrap">
-              {exam.sets.map((s) => (
+              {sets.map((s) => (
                 <button
                   key={s.id}
                   type="button"
@@ -224,7 +234,7 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
                   title={s.attempts ? `${s.attempts} attempt${s.attempts === 1 ? "" : "s"}` : "Not tried yet"}
                   onClick={() => setSetPick({ ...setPick, [exam.id]: s.id })}
                 >
-                  {s.name}
+                  {setLabel(s, picked)}
                   {s.lastPercent !== null ? ` · ${s.lastPercent}%` : ""}
                 </button>
               ))}
@@ -232,11 +242,11 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
                 {busy === "new" || refreshing ? "Making a set..." : "+ New random set"}
               </button>
             </div>
-            {exam.sets.length === 0 ? <p className="small muted">This exam has no sets yet. Make a random one to start.</p> : null}
+            {sets.length === 0 ? <p className="small muted">{allPicked ? "This exam has" : "The chapters you picked have"} no sets yet. Make a random one to start.</p> : null}
             {set ? (
               <p className="small muted">
-                {questionCount} {noun}{questionCount === 1 ? "" : "s"} in {set.name}
-                {allPicked ? "" : " for the chapters you picked"}.
+                {questionCount} {noun}{questionCount === 1 ? "" : "s"} in {setLabel(set, picked)}
+                {allPicked || set.chapterId ? "" : " for the chapters you picked"}.
                 {section === "mcq" && set.lastPercent !== null ? ` Last score ${set.lastPercent}%.` : ""}
                 {section === "cq" && set.cqAttempts > 0 ? ` Tried ${set.cqAttempts} time${set.cqAttempts === 1 ? "" : "s"}.` : ""}
               </p>

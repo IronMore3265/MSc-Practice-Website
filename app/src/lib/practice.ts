@@ -80,3 +80,17 @@ export function formatDuration(totalSeconds: number) {
 export function percent(part: number, whole: number) {
   return whole > 0 ? Math.round((part / whole) * 100) : 0;
 }
+
+type PickableSet = { name: string; chapterId: string | null };
+
+// The sets the home screen offers for the chapters picked. With All, the whole-exam sets. With chapters picked, the
+// sets made for those chapters, or, when they have none, the whole-exam sets (narrowed to the picked chapters later).
+export function setsForPick<T extends PickableSet>(sets: T[], picked: string[], allPicked: boolean): T[] {
+  const chapterSets = allPicked ? [] : sets.filter((s) => s.chapterId !== null && picked.includes(s.chapterId));
+  return chapterSets.length ? chapterSets : sets.filter((s) => s.chapterId === null);
+}
+
+// With one chapter picked, "Ch 1 Set 2" reads as "Set 2": the chapter is already on screen.
+export function setLabel(set: PickableSet, picked: string[]) {
+  return picked.length === 1 && set.chapterId ? set.name.replace(/^Ch \d+ /, "") : set.name;
+}

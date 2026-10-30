@@ -20,9 +20,11 @@ function text(form: FormData, key: string, max = 80) {
 export async function createAutoSet(_prev: ActionState, form: FormData): Promise<ActionState> {
   const { profile } = await requireAdmin();
   const examId = text(form, "exam_id", 40);
-  const { data, error } = await createAdminClient().rpc("create_auto_set", { p_exam_id: examId, p_user: profile.id });
+  // Empty means a whole-exam set. A chapter id makes a set for that chapter only.
+  const chapterId = text(form, "chapter_id", 40) || undefined;
+  const { data, error } = await createAdminClient().rpc("create_auto_set", { p_exam_id: examId, p_user: profile.id, p_chapter_id: chapterId });
   if (error) {
-    if (error.message.includes("no_questions")) return bad("No approved questions in this exam's chapters yet. Approve some in the question bank first.");
+    if (error.message.includes("no_questions")) return bad(chapterId ? "No approved questions in this chapter yet." : "No approved questions in this exam's chapters yet. Approve some in the question bank first.");
     if (error.message.includes("too_many_sets")) return bad("This exam already has 50 sets. Delete some first.");
     return bad("Could not build a set.");
   }
@@ -33,11 +35,18 @@ export async function createAutoSet(_prev: ActionState, form: FormData): Promise
 export async function createEmptySet(_prev: ActionState, form: FormData): Promise<ActionState> {
   const { profile } = await requireAdmin();
   const examId = text(form, "exam_id", 40);
+  const chapterId = text(form, "chapter_id", 40) || null;
   const supabase = await createClient();
+  let prefix = "Set ";
+  if (chapterId) {
+    const { data: link } = await supabase.from("exam_chapter").select("chapter(number)").eq("exam_id", examId).eq("chapter_id", chapterId).maybeSingle();
+    if (!link?.chapter) return bad("That chapter is not part of this exam.");
+    prefix = `Ch ${link.chapter.number} Set `;
+  }
   const { data: existing } = await supabase.from("question_set").select("name").eq("exam_id", examId);
-  const used = (existing ?? []).map((s) => Number(/^Set (\d+)$/.exec(s.name)?.[1] ?? 0));
-  const name = `Set ${Math.max(0, ...used) + 1}`;
-  const { data, error } = await supabase.from("question_set").insert({ exam_id: examId, name, origin: "curated", created_by: profile.id }).select("id").single();
+  const used = (existing ?? []).map((s) => (s.name.startsWith(prefix) && /^\d+$/.test(s.name.slice(prefix.length)) ? Number(s.name.slice(prefix.length)) : 0));
+  const name = `${prefix}${Math.max(0, ...used) + 1}`;
+  const { data, error } = await supabase.from("question_set").insert({ exam_id: examId, chapter_id: chapterId, name, origin: "curated", created_by: profile.id }).select("id").single();
   if (error || !data) return bad("Could not create the set.");
   revalidatePath("/admin/sets");
   redirect(`/admin/sets/${data.id}`);

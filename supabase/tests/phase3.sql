@@ -177,6 +177,29 @@ begin
   select count(*) into n from public.question_set_item where set_id = sid;
   assert n = 2, 'short pool gives a smaller set';
 
+  -- Chapter sets: questions from that chapter only, named and numbered per chapter, whole-exam numbering untouched.
+  set local role service_role;
+  sid := public.create_auto_set(ex, admin_id, ch1);
+  sid2 := public.create_auto_set(ex, admin_id, ch1);
+  reset role;
+  select count(*) into n from public.question_set_item i join public.question q on q.id = i.question_id where i.set_id = sid and q.chapter_id <> ch1;
+  assert n = 0, 'a chapter set holds only that chapter';
+  select count(*) into n from public.question_set_item where set_id = sid;
+  assert n > 0, 'a chapter set is not empty';
+  select count(*) into n from public.question_set where id = sid and chapter_id = ch1 and name ~ '^Ch [0-9]+ Set 1$';
+  assert n = 1, 'first chapter set is Ch N Set 1';
+  select count(*) into n from public.question_set where id = sid2 and name ~ '^Ch [0-9]+ Set 2$';
+  assert n = 1, 'second chapter set is Ch N Set 2';
+  set local role service_role;
+  sid := public.create_auto_set(ex, admin_id);
+  denied := false;
+  begin perform public.create_auto_set(ex, admin_id, ch_other); exception when sqlstate 'P0001' then denied := true; end;
+  reset role;
+  assert denied, 'a chapter outside the exam cannot get a set';
+  select name into st from public.question_set where id = sid;
+  assert st = 'Set 3', 'whole-exam numbering ignores chapter sets';
+  delete from public.question_set where exam_id = ex and name <> 'Set 1' and name <> 'Set 2';
+
   -- Sets: members read, only the admin writes.
   perform set_config('request.jwt.claims', json_build_object('sub', s2, 'role', 'authenticated')::text, true);
   set local role authenticated;

@@ -473,6 +473,7 @@ export type Database = {
       };
       question_set: {
         Row: {
+          chapter_id: string | null;
           created_at: string;
           created_by: string | null;
           exam_id: string;
@@ -481,6 +482,7 @@ export type Database = {
           origin: string;
         };
         Insert: {
+          chapter_id?: string | null;
           created_at?: string;
           created_by?: string | null;
           exam_id: string;
@@ -489,6 +491,7 @@ export type Database = {
           origin: string;
         };
         Update: {
+          chapter_id?: string | null;
           created_at?: string;
           created_by?: string | null;
           exam_id?: string;
@@ -497,6 +500,13 @@ export type Database = {
           origin?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "question_set_chapter_id_fkey";
+            columns: ["chapter_id"];
+            isOneToOne: false;
+            referencedRelation: "chapter";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "question_set_exam_id_fkey";
             columns: ["exam_id"];
@@ -852,7 +862,7 @@ export type Database = {
         Returns: Json;
       };
       create_auto_set: {
-        Args: { p_exam_id: string; p_user: string };
+        Args: { p_chapter_id?: string; p_exam_id: string; p_user: string };
         Returns: string;
       };
       save_question: {

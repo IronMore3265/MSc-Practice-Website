@@ -29,7 +29,7 @@ export default async function HomePage() {
         `id, name, short_name,
          exam(id, name, weight, format, mcq_seconds, sort_order,
            exam_chapter(chapter(id, number, title)),
-           question_set(id, name, created_at, question_set_item(question(chapter_id, kind))))`,
+           question_set(id, name, chapter_id, created_at, question_set_item(question(chapter_id, kind))))`,
       )
       .order("sort_order"),
     supabase.from("invite").select("*").eq("created_by", profile.id).order("created_at", { ascending: false }),
@@ -100,7 +100,7 @@ export default async function HomePage() {
               if (bucket) bucket[item.question.chapter_id] = (bucket[item.question.chapter_id] ?? 0) + 1;
             }
             const h = history.get(s.id);
-            return { id: s.id, name: s.name, mcqByChapter, cqByChapter, attempts: h?.attempts ?? 0, cqAttempts: h?.cqAttempts ?? 0, lastPercent: h?.lastPercent ?? null };
+            return { id: s.id, name: s.name, chapterId: s.chapter_id, mcqByChapter, cqByChapter, attempts: h?.attempts ?? 0, cqAttempts: h?.cqAttempts ?? 0, lastPercent: h?.lastPercent ?? null };
           }),
       })),
   }));

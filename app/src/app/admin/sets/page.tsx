@@ -13,10 +13,22 @@ export default async function SetsPage({ searchParams }: { searchParams: SearchP
   const course = (courses ?? []).find((c) => c.id === sp.course) ?? courses?.[0];
   if (!course) return <p className="small muted">No courses yet. Add one on the Exams tab.</p>;
 
-  const { data: exams } = await supabase.from("exam").select("*, exam_set_settings(*), exam_chapter(chapter_id)").eq("course_id", course.id).order("sort_order");
+  const { data: exams } = await supabase.from("exam").select("*, exam_set_settings(*), exam_chapter(chapter_id, chapter(number))").eq("course_id", course.id).order("sort_order");
   const exam = (exams ?? []).find((e) => e.id === sp.exam) ?? exams?.[0];
 
   const chapterIds = exam?.exam_chapter.map((c) => c.chapter_id) ?? [];
+  const chapterOptions = (exam?.exam_chapter ?? []).flatMap((c) => (c.chapter ? [{ id: c.chapter_id, number: c.chapter.number }] : [])).sort((a, b) => a.number - b.number);
+  // Sets can cover the whole exam or one chapter. Students see chapter sets only when they pick that chapter.
+  const scopeSelect = (
+    <select name="chapter_id" className="select input-sm" aria-label="Set covers" defaultValue="">
+      <option value="">Whole exam</option>
+      {chapterOptions.map((c) => (
+        <option key={c.id} value={c.id}>
+          Ch {c.number} only
+        </option>
+      ))}
+    </select>
+  );
   const [{ data: pool }, { data: sets }] = exam
     ? await Promise.all([
         chapterIds.length ? supabase.from("question").select("kind").eq("status", "approved").in("chapter_id", chapterIds) : Promise.resolve({ data: [] as { kind: string }[] }),
@@ -68,9 +80,11 @@ export default async function SetsPage({ searchParams }: { searchParams: SearchP
             <div className="wrap" style={{ gap: 14 }}>
               <ActionForm action={createAutoSet} submitLabel="New random set" buttonClass="btn btn-primary" className="wrap">
                 <input type="hidden" name="exam_id" value={exam.id} />
+                {scopeSelect}
               </ActionForm>
               <ActionForm action={createEmptySet} submitLabel="New empty set" buttonClass="btn" className="wrap">
                 <input type="hidden" name="exam_id" value={exam.id} />
+                {scopeSelect}
               </ActionForm>
             </div>
           </div>

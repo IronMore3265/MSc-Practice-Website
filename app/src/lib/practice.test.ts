@@ -1,7 +1,7 @@
 // Run with: npm test
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { UUID_RE, formatClock, formatDuration, percent } from "./practice.ts";
+import { UUID_RE, formatClock, formatDuration, percent, setLabel, setsForPick } from "./practice.ts";
 
 test("formatClock shows minutes and seconds with leading zeros", () => {
   assert.equal(formatClock(600), "10:00");
@@ -33,4 +33,37 @@ test("UUID_RE accepts ids and rejects anything else", () => {
   assert.ok(UUID_RE.test("0f8fad5b-d9cb-469f-a165-70867728950e"));
   assert.ok(!UUID_RE.test("not-a-uuid"));
   assert.ok(!UUID_RE.test("0f8fad5b-d9cb-469f-a165-70867728950e'; drop table question;--"));
+});
+
+const sets = [
+  { name: "Set 1", chapterId: null },
+  { name: "Set 2", chapterId: null },
+  { name: "Ch 1 Set 1", chapterId: "c1" },
+  { name: "Ch 1 Set 2", chapterId: "c1" },
+  { name: "Ch 2 Set 1", chapterId: "c2" },
+];
+const names = (list: { name: string }[]) => list.map((s) => s.name);
+
+test("setsForPick shows only whole-exam sets for All", () => {
+  assert.deepEqual(names(setsForPick(sets, ["c1", "c2", "c3"], true)), ["Set 1", "Set 2"]);
+});
+
+test("setsForPick shows only that chapter's sets for one chapter", () => {
+  assert.deepEqual(names(setsForPick(sets, ["c1"], false)), ["Ch 1 Set 1", "Ch 1 Set 2"]);
+  assert.deepEqual(names(setsForPick(sets, ["c2"], false)), ["Ch 2 Set 1"]);
+});
+
+test("setsForPick falls back to whole-exam sets when the picked chapters have none", () => {
+  assert.deepEqual(names(setsForPick(sets, ["c3"], false)), ["Set 1", "Set 2"]);
+  assert.deepEqual(names(setsForPick([{ name: "Set 1", chapterId: null }], ["c1"], false)), ["Set 1"]);
+});
+
+test("setsForPick with several chapters shows their chapter sets", () => {
+  assert.deepEqual(names(setsForPick(sets, ["c1", "c2"], false)), ["Ch 1 Set 1", "Ch 1 Set 2", "Ch 2 Set 1"]);
+});
+
+test("setLabel drops the chapter prefix only when one chapter is picked", () => {
+  assert.equal(setLabel(sets[2], ["c1"]), "Set 1");
+  assert.equal(setLabel(sets[2], ["c1", "c2"]), "Ch 1 Set 1");
+  assert.equal(setLabel(sets[0], ["c1", "c2"]), "Set 1");
 });
