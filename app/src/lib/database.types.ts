@@ -115,6 +115,136 @@ export type Database = {
           },
         ];
       };
+      figure: {
+        Row: {
+          bbox: number[];
+          blob_path: string;
+          caption: string | null;
+          chapter_id: string;
+          created_at: string;
+          height: number;
+          id: string;
+          import_key: string;
+          kind: string;
+          label: string | null;
+          mime_type: string;
+          page: number;
+          pdf_id: string;
+          sha256: string;
+          source: string;
+          width: number;
+        };
+        Insert: {
+          bbox: number[];
+          blob_path: string;
+          caption?: string | null;
+          chapter_id: string;
+          created_at?: string;
+          height: number;
+          id?: string;
+          import_key: string;
+          kind: string;
+          label?: string | null;
+          mime_type: string;
+          page: number;
+          pdf_id: string;
+          sha256: string;
+          source: string;
+          width: number;
+        };
+        Update: {
+          bbox?: number[];
+          blob_path?: string;
+          caption?: string | null;
+          chapter_id?: string;
+          created_at?: string;
+          height?: number;
+          id?: string;
+          import_key?: string;
+          kind?: string;
+          label?: string | null;
+          mime_type?: string;
+          page?: number;
+          pdf_id?: string;
+          sha256?: string;
+          source?: string;
+          width?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "figure_chapter_id_fkey";
+            columns: ["chapter_id"];
+            isOneToOne: false;
+            referencedRelation: "chapter";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "figure_pdf_id_fkey";
+            columns: ["pdf_id"];
+            isOneToOne: false;
+            referencedRelation: "source_pdf";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      page_text: {
+        Row: { page: number; pdf_id: string; text: string };
+        Insert: { page: number; pdf_id: string; text: string };
+        Update: { page?: number; pdf_id?: string; text?: string };
+        Relationships: [
+          {
+            foreignKeyName: "page_text_pdf_id_fkey";
+            columns: ["pdf_id"];
+            isOneToOne: false;
+            referencedRelation: "source_pdf";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      source_pdf: {
+        Row: {
+          chapter_id: string;
+          figures_pending: number;
+          filename: string;
+          id: string;
+          imported_at: string;
+          page_count: number;
+          pages_without_text: number;
+          review_status: string;
+          sha256: string;
+        };
+        Insert: {
+          chapter_id: string;
+          figures_pending?: number;
+          filename: string;
+          id?: string;
+          imported_at?: string;
+          page_count: number;
+          pages_without_text?: number;
+          review_status?: string;
+          sha256: string;
+        };
+        Update: {
+          chapter_id?: string;
+          figures_pending?: number;
+          filename?: string;
+          id?: string;
+          imported_at?: string;
+          page_count?: number;
+          pages_without_text?: number;
+          review_status?: string;
+          sha256?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "source_pdf_chapter_id_fkey";
+            columns: ["chapter_id"];
+            isOneToOne: true;
+            referencedRelation: "chapter";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       invite: {
         Row: {
           code: string;
@@ -254,3 +384,5 @@ export type Chapter = Database["public"]["Tables"]["chapter"]["Row"];
 export type Exam = Database["public"]["Tables"]["exam"]["Row"];
 export type ExamSetSettings = Database["public"]["Tables"]["exam_set_settings"]["Row"];
 export type ExamFormat = Database["public"]["Enums"]["exam_format"];
+export type SourcePdf = Database["public"]["Tables"]["source_pdf"]["Row"];
+export type Figure = Database["public"]["Tables"]["figure"]["Row"];

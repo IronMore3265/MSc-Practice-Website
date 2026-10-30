@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figure review</title>
+<style>
+  :root { --bg:#f2efe8; --ink:#1c1a16; --muted:#6f6a5c; --orange:#ff6b1a; --card:#faf8f2; --radius:8px; }
+  * { box-sizing: border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family: Outfit, system-ui, sans-serif; line-height:1.4; }
+  .label { font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  button, input, textarea { font:inherit; color:var(--ink); }
+  .btn { background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); padding:5px 12px; font-weight:600; font-size:13px; cursor:pointer; box-shadow:2px 2px 0 var(--ink); }
+  .btn:active { transform:translate(2px,2px); box-shadow:none; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn-primary { background:var(--orange); }
+  .btn-ink { background:var(--ink); color:var(--bg); }
+  .field { width:100%; background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); padding:6px 9px; font-size:14px; }
+  .field:focus { outline:none; border-color:var(--orange); }
+  .chip { display:inline-block; font-size:10.5px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; border:1.5px solid var(--ink); border-radius:4px; padding:1px 7px; background:var(--card); }
+  .chip-done { background:var(--ink); color:var(--orange); }
+  .chip-now { background:var(--orange); }
+  .chip-muted { border-color:var(--muted); color:var(--muted); }
+
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:10px 16px; border-bottom:2px solid var(--ink); background:var(--card); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:18px; font-weight:500; margin:0; }
+  header .accent { font-family: Doto, monospace; font-weight:900; color:var(--orange); text-transform:uppercase; }
+  header .title { width:240px; }
+  .spacer { flex:1; }
+  #warnings { padding:8px 16px; font-size:13px; border-bottom:1px dashed var(--muted); }
+  #warnings:empty { display:none; }
+
+  main { display:grid; grid-template-columns: 120px minmax(0,1fr) 320px; gap:16px; padding:16px; align-items:start; }
+  #pages { display:flex; flex-direction:column; gap:6px; position:sticky; top:68px; max-height:calc(100vh - 90px); overflow:auto; padding:2px 6px 6px 2px; }
+  .pg { text-align:left; background:var(--card); border:2px solid var(--ink); border-radius:999px; padding:3px 12px; font-size:13px; font-weight:600; cursor:pointer; display:flex; justify-content:space-between; gap:6px; }
+  .pg[aria-current="page"] { background:var(--ink); color:var(--bg); }
+  .pg .dot { color:var(--orange); }
+
+  #stage { background:var(--card); border:1px solid var(--ink); border-radius:var(--radius); padding:10px; }
+  #pagebox { position:relative; width:100%; user-select:none; touch-action:none; cursor:crosshair; line-height:0; }
+  #pagebox img { width:100%; display:block; border:1px solid var(--muted); pointer-events:none; -webkit-user-drag:none; }
+  .box { position:absolute; border:2px solid var(--orange); background:rgba(255,107,26,.12); cursor:move; }
+  .box[data-status="approved"] { border-color:var(--ink); background:rgba(28,26,22,.07); }
+  .box[data-status="rejected"] { border:2px dashed var(--muted); background:rgba(111,106,92,.08); }
+  .box.sel { outline:3px solid var(--orange); outline-offset:1px; z-index:2; }
+  .box .tag { position:absolute; left:-2px; top:-20px; line-height:16px; font-size:11px; font-weight:600; background:var(--ink); color:var(--orange); padding:0 6px; border-radius:3px; white-space:nowrap; pointer-events:none; }
+  .box[data-status="pending"] .tag { background:var(--orange); color:var(--ink); }
+  .h { position:absolute; width:12px; height:12px; background:var(--card); border:2px solid var(--ink); display:none; }
+  .box.sel .h { display:block; }
+  .h[data-h="nw"] { left:-7px; top:-7px; cursor:nwse-resize; } .h[data-h="n"] { left:calc(50% - 6px); top:-7px; cursor:ns-resize; }
+  .h[data-h="ne"] { right:-7px; top:-7px; cursor:nesw-resize; } .h[data-h="e"] { right:-7px; top:calc(50% - 6px); cursor:ew-resize; }
+  .h[data-h="se"] { right:-7px; bottom:-7px; cursor:nwse-resize; } .h[data-h="s"] { left:calc(50% - 6px); bottom:-7px; cursor:ns-resize; }
+  .h[data-h="sw"] { left:-7px; bottom:-7px; cursor:nesw-resize; } .h[data-h="w"] { left:-7px; top:calc(50% - 6px); cursor:ew-resize; }
+  #draft { position:absolute; border:2px dashed var(--orange); background:rgba(255,107,26,.1); pointer-events:none; }
+  .hint { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
+
+  #side { position:sticky; top:68px; display:flex; flex-direction:column; gap:12px; max-height:calc(100vh - 90px); overflow:auto; padding:0 6px 6px 0; }
+  .panel { background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); padding:12px; box-shadow:5px 5px 0 var(--ink); display:flex; flex-direction:column; gap:10px; }
+  .preview { border:1px solid var(--ink); background:#fff; line-height:0; max-height:260px; overflow:auto; }
+  .preview img { max-width:100%; display:block; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .meta { font-size:12px; color:var(--muted); }
+  textarea.field { resize:vertical; min-height:60px; }
+  #toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 16px; border-radius:var(--radius); font-size:13px; display:none; z-index:9; }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    #pages { flex-direction:row; position:static; max-height:none; overflow-x:auto; }
+    #side { position:static; max-height:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span id="course"></span> <span class="accent" id="chap"></span></h1>
+  <input id="title" class="field title" placeholder="Chapter title (optional)" aria-label="Chapter title">
+  <span class="chip" id="counts"></span>
+  <span class="spacer"></span>
+  <label class="meta"><input type="checkbox" id="showRejected"> Show rejected</label>
+  <button class="btn" id="nextPending">Next pending (N)</button>
+  <button class="btn btn-primary" id="approveAll">Approve all pending</button>
+</header>
+<div id="warnings"></div>
+<main>
+  <nav id="pages" aria-label="Pages"></nav>
+  <section>
+    <div id="stage">
+      <div class="row" style="margin-bottom:8px">
+        <span class="label" id="pageLabel"></span>
+        <span class="chip chip-now" id="noText" hidden>No text on this page</span>
+        <span class="spacer"></span>
+        <button class="btn" id="prev">&larr; Prev</button>
+        <button class="btn" id="next">Next &rarr;</button>
+      </div>
+      <div id="pagebox"><img id="pageimg" alt="PDF page"><div id="draft" hidden></div></div>
+      <p class="hint">Drag on the page to add a figure the tool missed. Click a box to select it, drag it to move, drag a handle to resize. Shift-click to select several, then Merge. Keys: A approve, R reject, N next pending, arrows change page.</p>
+    </div>
+  </section>
+  <aside id="side"></aside>
+</main>
+<div id="toast" role="status"></div>
+<script>
+const TOKEN = "__TOKEN__";
+let S = null;            // server state
+let pageNo = 1;
+let selected = [];       // figure keys, last one is the primary
+let showRejected = false;
+
+const $ = (id) => document.getElementById(id);
+const pageMeta = (n) => S.pages.find((p) => p.page === n);
+const figsOn = (n) => S.figures.filter((f) => f.page === n);
+const figByKey = (k) => S.figures.find((f) => f.key === k);
+const visible = (f) => showRejected || f.status !== "rejected";
+
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(toast.id); toast.id = setTimeout(() => (t.style.display = "none"), 2500);
+}
+
+async function api(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(body || {}) });
+  const data = await r.json();
+  if (!r.ok) { toast(data.error || "Something went wrong"); throw new Error(data.error); }
+  return data;
+}
+
+function replaceFig(fig) {
+  const i = S.figures.findIndex((f) => f.key === fig.key);
+  if (i >= 0) S.figures[i] = fig; else S.figures.push(fig);
+}
+
+function renderAll() {
+  renderHeader(); renderPages(); renderStage(); renderSide();
+}
+
+function renderHeader() {
+  $("course").textContent = S.course;
+  $("chap").textContent = "Ch " + S.chapter;
+  if (document.activeElement !== $("title")) $("title").value = S.title || "";
+  const c = { pending: 0, approved: 0, rejected: 0 };
+  S.figures.forEach((f) => c[f.status]++);
+  $("counts").textContent = `${c.pending} pending · ${c.approved} approved · ${c.rejected} rejected`;
+  $("warnings").innerHTML = S.warnings.map((w) => `<div>${esc(w)}</div>`).join("");
+}
+
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function renderPages() {
+  $("pages").innerHTML = S.pages.map((p) => {
+    const f = figsOn(p.page).filter(visible);
+    const pend = f.some((x) => x.status === "pending");
+    return `<button class="pg" data-p="${p.page}" ${p.page === pageNo ? 'aria-current="page"' : ""}><span>p${p.page}</span><span class="dot">${f.length ? (pend ? "●" : "○") : ""}${f.length || ""}</span></button>`;
+  }).join("");
+}
+
+function renderStage() {
+  const m = pageMeta(pageNo);
+  $("pageLabel").textContent = `Page ${pageNo} of ${S.pages.length}`;
+  $("noText").hidden = m.text_chars >= 20;
+  const img = $("pageimg");
+  const src = `/page/${pageNo}.png`;
+  if (!img.src.endsWith(src)) img.src = src;
+  const box = $("pagebox");
+  box.querySelectorAll(".box").forEach((e) => e.remove());
+  for (const f of figsOn(pageNo).filter(visible)) {
+    const [x0, y0, x1, y1] = f.bbox;
+    const el = document.createElement("div");
+    el.className = "box" + (selected.includes(f.key) ? " sel" : "");
+    el.dataset.key = f.key; el.dataset.status = f.status;
+    el.style.left = (x0 / m.width * 100) + "%"; el.style.top = (y0 / m.height * 100) + "%";
+    el.style.width = ((x1 - x0) / m.width * 100) + "%"; el.style.height = ((y1 - y0) / m.height * 100) + "%";
+    el.innerHTML = `<span class="tag">${esc(f.label || "Figure")} · ${f.status}</span>` +
+      ["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((h) => `<i class="h" data-h="${h}"></i>`).join("");
+    box.appendChild(el);
+  }
+}
+
+function renderSide() {
+  const side = $("side");
+  const primary = selected.length ? figByKey(selected[selected.length - 1]) : null;
+  if (!primary) {
+    side.innerHTML = `<div class="panel"><span class="label">Nothing selected</span><p class="meta" style="margin:0">Click a box on the page to see the exact crop that will be uploaded.</p></div>`;
+    return;
+  }
+  const f = primary;
+  const origin = f.source === "embedded" ? "Original image bytes from the PDF" : `Rendered from the PDF at ${S.dpi || 300} DPI`;
+  side.innerHTML = `
+    <div class="panel">
+      <div class="row"><span class="label">Selected</span><span class="chip ${f.status === "approved" ? "chip-done" : f.status === "pending" ? "chip-now" : "chip-muted"}">${f.status}</span><span class="chip">${f.kind}</span></div>
+      <div class="preview"><img alt="Crop" src="/figure/${f.key}?v=${f.sha256}"></div>
+      <div class="meta">${origin} · ${f.width} × ${f.height} px · page ${f.page}</div>
+      <label class="label" for="flabel">Label</label>
+      <input id="flabel" class="field" value="${esc(f.label)}" placeholder="Figure 4.2">
+      <label class="label" for="fcap">Caption</label>
+      <textarea id="fcap" class="field" placeholder="Caption text from the notes">${esc(f.caption)}</textarea>
+      <div class="row">
+        <button class="btn btn-primary" data-act="approved">Approve (A)</button>
+        <button class="btn" data-act="rejected">Reject (R)</button>
+        <button class="btn" data-act="pending">Pending</button>
+      </div>
+      ${selected.length > 1 ? `<button class="btn btn-ink" id="merge">Merge ${selected.length} figures</button>` : ""}
+    </div>`;
+}
+
+// ---- actions ----
+async function setStatus(keys, status) {
+  for (const k of keys) replaceFig(await api(`/api/figure/${k}`, { status }));
+  renderAll();
+}
+
+function gotoPage(n) {
+  pageNo = Math.max(1, Math.min(S.pages.length, n));
+  selected = [];
+  renderAll();
+  window.scrollTo({ top: 0 });
+}
+
+function nextPending() {
+  const order = S.figures.filter((f) => f.status === "pending").sort((a, b) => a.page - b.page || a.bbox[1] - b.bbox[1]);
+  if (!order.length) return toast("No pending figures left.");
+  const cur = selected.length ? figByKey(selected[selected.length - 1]) : null;
+  const after = cur ? order.find((f) => f.page > cur.page || (f.page === cur.page && f.bbox[1] > cur.bbox[1])) : null;
+  const f = after || order[0];
+  pageNo = f.page; selected = [f.key]; renderAll();
+}
+
+$("pages").addEventListener("click", (e) => { const b = e.target.closest(".pg"); if (b) gotoPage(+b.dataset.p); });
+$("prev").onclick = () => gotoPage(pageNo - 1);
+$("next").onclick = () => gotoPage(pageNo + 1);
+$("nextPending").onclick = nextPending;
+$("showRejected").onchange = (e) => { showRejected = e.target.checked; renderAll(); };
+$("approveAll").onclick = async () => {
+  const r = await api("/api/approve-pending");
+  S.figures.forEach((f) => { if (f.status === "pending") f.status = "approved"; });
+  renderAll(); toast(`Approved ${r.approved} figure(s).`);
+};
+$("title").onchange = async (e) => { S.title = e.target.value.trim() || null; await api("/api/title", { title: e.target.value }); toast("Title saved."); };
+
+$("side").addEventListener("click", async (e) => {
+  const act = e.target.closest("[data-act]");
+  if (act && selected.length) return setStatus([selected[selected.length - 1]], act.dataset.act);
+  if (e.target.id === "merge") {
+    const keys = [...selected];
+    try {
+      const fig = await api("/api/merge", { keys });
+      S.figures = S.figures.filter((f) => !keys.slice(1).includes(f.key));
+      replaceFig(fig); selected = [fig.key]; renderAll(); toast("Merged.");
+    } catch (_) {}
+  }
+});
+$("side").addEventListener("change", async (e) => {
+  if (!selected.length || (e.target.id !== "flabel" && e.target.id !== "fcap")) return;
+  const key = selected[selected.length - 1];
+  replaceFig(await api(`/api/figure/${key}`, { label: $("flabel").value, caption: $("fcap").value }));
+  renderPages(); renderStage(); toast("Saved.");
+});
+
+document.addEventListener("keydown", (e) => {
+  if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) || e.ctrlKey || e.metaKey) return;
+  const k = e.key.toLowerCase();
+  if (k === "arrowright") gotoPage(pageNo + 1);
+  else if (k === "arrowleft") gotoPage(pageNo - 1);
+  else if (k === "n") nextPending();
+  else if (selected.length && k === "a") setStatus([selected[selected.length - 1]], "approved");
+  else if (selected.length && (k === "r" || k === "delete")) setStatus([selected[selected.length - 1]], "rejected");
+});
+
+// ---- pointer: draw, move, resize ----
+const pagebox = $("pagebox");
+let drag = null;
+
+function pt(e) {
+  const r = pagebox.getBoundingClientRect(), m = pageMeta(pageNo);
+  return [(e.clientX - r.left) / r.width * m.width, (e.clientY - r.top) / r.height * m.height];
+}
+
+function applyBox(el, b, m) {
+  el.style.left = (b[0] / m.width * 100) + "%"; el.style.top = (b[1] / m.height * 100) + "%";
+  el.style.width = ((b[2] - b[0]) / m.width * 100) + "%"; el.style.height = ((b[3] - b[1]) / m.height * 100) + "%";
+}
+
+pagebox.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  const m = pageMeta(pageNo), p = pt(e);
+  const boxEl = e.target.closest(".box");
+  if (boxEl) {
+    const key = boxEl.dataset.key, f = figByKey(key);
+    if (e.shiftKey) selected = selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key];
+    else if (!selected.includes(key) || selected.length > 1) selected = [key];
+    else selected = [key];
+    renderStage(); renderSide();
+    const el = pagebox.querySelector(`.box[data-key="${key}"]`);
+    if (!el || e.shiftKey) return;
+    drag = { mode: e.target.dataset.h ? "resize" : "move", h: e.target.dataset.h, key, start: p, orig: [...f.bbox], el, m, cur: [...f.bbox] };
+  } else {
+    if (!e.shiftKey) { selected = []; renderStage(); renderSide(); }
+    drag = { mode: "draw", start: p, m, cur: null };
+  }
+  pagebox.setPointerCapture(e.pointerId);
+});
+
+pagebox.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const p = pt(e), m = drag.m, dx = p[0] - drag.start[0], dy = p[1] - drag.start[1];
+  const clampX = (v) => Math.max(0, Math.min(m.width, v)), clampY = (v) => Math.max(0, Math.min(m.height, v));
+  if (drag.mode === "draw") {
+    const b = [clampX(Math.min(drag.start[0], p[0])), clampY(Math.min(drag.start[1], p[1])), clampX(Math.max(drag.start[0], p[0])), clampY(Math.max(drag.start[1], p[1]))];
+    drag.cur = b;
+    const d = $("draft"); d.hidden = false; applyBox(d, b, m);
+  } else if (drag.mode === "move") {
+    const w = drag.orig[2] - drag.orig[0], h = drag.orig[3] - drag.orig[1];
+    const x0 = Math.max(0, Math.min(m.width - w, drag.orig[0] + dx)), y0 = Math.max(0, Math.min(m.height - h, drag.orig[1] + dy));
+    drag.cur = [x0, y0, x0 + w, y0 + h]; applyBox(drag.el, drag.cur, m);
+  } else {
+    const b = [...drag.orig], h = drag.h;
+    if (h.includes("w")) b[0] = clampX(drag.orig[0] + dx);
+    if (h.includes("e")) b[2] = clampX(drag.orig[2] + dx);
+    if (h.includes("n")) b[1] = clampY(drag.orig[1] + dy);
+    if (h.includes("s")) b[3] = clampY(drag.orig[3] + dy);
+    drag.cur = [Math.min(b[0], b[2]), Math.min(b[1], b[3]), Math.max(b[0], b[2]), Math.max(b[1], b[3])];
+    applyBox(drag.el, drag.cur, m);
+  }
+});
+
+pagebox.addEventListener("pointerup", async () => {
+  const d = drag; drag = null; $("draft").hidden = true;
+  if (!d || !d.cur) return;
+  const b = d.cur;
+  if (b[2] - b[0] < 8 || b[3] - b[1] < 8) { renderStage(); return; }
+  try {
+    if (d.mode === "draw") {
+      const fig = await api("/api/figure", { page: pageNo, bbox: b });
+      replaceFig(fig); selected = [fig.key]; toast("Figure added and approved.");
+    } else if (b.some((v, i) => Math.abs(v - d.orig[i]) > 0.5)) {
+      replaceFig(await api(`/api/figure/${d.key}`, { bbox: b }));
+    }
+  } catch (_) {}
+  renderAll();
+});
+
+(async function init() {
+  S = await (await fetch("/api/state")).json();
+  const firstPending = S.figures.find((f) => f.status === "pending");
+  pageNo = firstPending ? firstPending.page : 1;
+  renderAll();
+})();
+</script>
+</body>
+</html>

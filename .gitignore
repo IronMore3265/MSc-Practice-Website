@@ -18,3 +18,7 @@ node_modules
 
 # local tool config
 .claude/
+
+# python
+__pycache__/
+*.pyc

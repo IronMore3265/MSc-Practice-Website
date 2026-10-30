@@ -13,6 +13,8 @@ declare
   new_id     uuid := '00000000-0000-0000-0000-0000000000d1';
   n integer;
   course_a uuid;
+  chap_a uuid;
+  pdf_a uuid;
   inv public.invite;
   denied boolean;
 begin
@@ -119,10 +121,10 @@ begin
   -- Admin: sees all profiles and invites, edits course content, no invite limit.
   perform set_config('request.jwt.claims', json_build_object('sub', admin_id, 'role', 'authenticated')::text, true);
   set local role authenticated;
-  select count(*) into n from public.profile;
-  assert n = 4, format('admin sees all profiles, saw %s', n);
-  select count(*) into n from public.invite;
-  assert n = 3, 'admin sees all invites';
+  select count(*) into n from public.profile where email like '%@test.local';
+  assert n = 4, format('admin sees all test profiles, saw %s', n);
+  select count(*) into n from public.invite where created_by = stud_a;
+  assert n = 3, 'admin sees invites made by others';
   update public.course set short_name = 'Renamed' where id = course_a;
   get diagnostics n = row_count;
   assert n = 1, 'admin updates course';
@@ -175,6 +177,59 @@ begin
   perform public.create_invite();
   reset role;
 
+  -- Phase 2: source_pdf and figure are readable by active members, page_text by the admin only, nobody writes from the browser.
+  select id into chap_a from public.chapter where course_id = course_a order by number limit 1;
+  insert into public.source_pdf (chapter_id, filename, sha256, page_count) values (chap_a, 'ch1.pdf', 'abc', 3) returning id into pdf_a;
+  insert into public.page_text (pdf_id, page, text) values (pdf_a, 1, 'Page one text');
+  insert into public.figure (pdf_id, chapter_id, import_key, page, bbox, kind, source, blob_path, mime_type, width, height, sha256)
+  values (pdf_a, chap_a, 'k1', 1, '{0,0,10,10}', 'raster', 'embedded', 'c/01/k1.png', 'image/png', 10, 10, 'abc');
+
+  set local role anon;
+  denied := false;
+  begin perform 1 from public.figure limit 1; exception when insufficient_privilege then denied := true; end;
+  assert denied, 'anon must not read figure';
+  denied := false;
+  begin perform 1 from public.page_text limit 1; exception when insufficient_privilege then denied := true; end;
+  assert denied, 'anon must not read page_text';
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', stud_b, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.source_pdf where id = pdf_a;
+  assert n = 1, 'active student reads source_pdf';
+  select count(*) into n from public.figure where pdf_id = pdf_a;
+  assert n = 1, 'active student reads figure';
+  select count(*) into n from public.page_text where pdf_id = pdf_a;
+  assert n = 0, 'student must not read page_text';
+  denied := false;
+  begin insert into public.figure (pdf_id, chapter_id, import_key, page, bbox, kind, source, blob_path, mime_type, width, height, sha256)
+    values (pdf_a, chap_a, 'k2', 1, '{0,0,10,10}', 'raster', 'embedded', 'x', 'image/png', 1, 1, 'x'); exception when insufficient_privilege then denied := true; end;
+  assert denied, 'student must not insert figure';
+  denied := false;
+  begin update public.source_pdf set review_status = 'reviewed'; exception when insufficient_privilege then denied := true; end;
+  assert denied, 'student must not update source_pdf';
+  denied := false;
+  begin delete from public.figure; exception when insufficient_privilege then denied := true; end;
+  assert denied, 'student must not delete figure';
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', pending_id, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.source_pdf where id = pdf_a;
+  assert n = 0, 'pending user must not read source_pdf';
+  select count(*) into n from public.figure where pdf_id = pdf_a;
+  assert n = 0, 'pending user must not read figure';
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', admin_id, 'role', 'authenticated')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.page_text where pdf_id = pdf_a;
+  assert n = 1, 'admin reads page_text';
+  denied := false;
+  begin delete from public.page_text; exception when insufficient_privilege then denied := true; end;
+  assert denied, 'even admin writes page_text only through the service role';
+  reset role;
+
   -- Storage: private buckets, answer photos only in your own folder.
   select count(*) into n from storage.buckets where id in ('figures', 'answer-photos') and public = false;
   assert n = 2, 'both buckets exist and are private';
@@ -186,7 +241,7 @@ begin
   set local role authenticated;
   select count(*) into n from storage.objects where bucket_id = 'answer-photos';
   assert n = 1, format('student A sees only own answer photos, saw %s', n);
-  select count(*) into n from storage.objects where bucket_id = 'figures';
+  select count(*) into n from storage.objects where bucket_id = 'figures' and name like 'ch1/%';
   assert n = 1, 'active student reads figures';
   denied := false;
   begin insert into storage.objects (bucket_id, name, owner) values ('figures', 'ch1/evil.png', stud_a); exception when insufficient_privilege or check_violation then denied := true; end;

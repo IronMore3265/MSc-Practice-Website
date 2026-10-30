@@ -417,3 +417,28 @@ p {
     width: 100%;
   }
 }
+
+/* Figures (Phase 2): 1px ink border, original image, caption with label and page */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.figure-card {
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.figure-card img {
+  width: 100%;
+  height: auto;
+  background: #fff;
+  border: 1px solid var(--muted);
+}
