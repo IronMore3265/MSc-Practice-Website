@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Questions, sets and the AI router tabs arrive in later phases.
+// Usage counts and data export arrive with Phase 8.
 const TABS = [
   { href: "/admin", label: "Exams" },
   { href: "/admin/chapters", label: "Chapters" },
+  { href: "/admin/questions", label: "Questions" },
+  { href: "/admin/sets", label: "Sets" },
+  { href: "/admin/ai", label: "AI router" },
   { href: "/admin/students", label: "Students" },
 ];
 

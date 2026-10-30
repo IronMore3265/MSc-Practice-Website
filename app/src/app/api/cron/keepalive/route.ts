@@ -1,8 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { runTick } from "@/lib/ai/router";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -19,5 +21,9 @@ export async function GET(request: Request) {
 
   const { error } = await createAdminClient().from("course").select("id", { head: true, count: "exact" }).limit(1);
   if (error) return NextResponse.json({ ok: false }, { status: 500 });
+  // Catch jobs nobody was polling for (plan 5b: the optional daily cron).
+  after(async () => {
+    await runTick();
+  });
   return NextResponse.json({ ok: true });
 }

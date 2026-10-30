@@ -442,3 +442,20 @@ p {
   background: #fff;
   border: 1px solid var(--muted);
 }
+
+/* Question bank (Phase 3) */
+.textarea {
+  resize: vertical;
+  min-height: 90px;
+  line-height: 1.45;
+}
+
+.opt-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.opt-row .check {
+  margin-top: 4px;
+}

@@ -245,6 +245,300 @@ export type Database = {
           },
         ];
       };
+      api_slot: {
+        Row: {
+          cooldown_until: string | null;
+          enabled: boolean;
+          id: string;
+          key_name: string;
+          last_error: string | null;
+          last_error_at: string | null;
+          last_used_at: string | null;
+          model: string;
+          next_allowed_at: string;
+          pace_seconds: number;
+          priority: number;
+          tier: string;
+        };
+        Insert: {
+          cooldown_until?: string | null;
+          enabled?: boolean;
+          id?: string;
+          key_name: string;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          last_used_at?: string | null;
+          model: string;
+          next_allowed_at?: string;
+          pace_seconds?: number;
+          priority: number;
+          tier: string;
+        };
+        Update: {
+          cooldown_until?: string | null;
+          enabled?: boolean;
+          id?: string;
+          key_name?: string;
+          last_error?: string | null;
+          last_error_at?: string | null;
+          last_used_at?: string | null;
+          model?: string;
+          next_allowed_at?: string;
+          pace_seconds?: number;
+          priority?: number;
+          tier?: string;
+        };
+        Relationships: [];
+      };
+      job: {
+        Row: {
+          attempts: number;
+          created_at: string;
+          error: string | null;
+          finished_at: string | null;
+          id: string;
+          kind: string;
+          payload: Json;
+          priority: number;
+          result: Json | null;
+          slot_id: string | null;
+          started_at: string | null;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          attempts?: number;
+          created_at?: string;
+          error?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          kind: string;
+          payload?: Json;
+          priority?: number;
+          result?: Json | null;
+          slot_id?: string | null;
+          started_at?: string | null;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          attempts?: number;
+          created_at?: string;
+          error?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          kind?: string;
+          payload?: Json;
+          priority?: number;
+          result?: Json | null;
+          slot_id?: string | null;
+          started_at?: string | null;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_slot_id_fkey";
+            columns: ["slot_id"];
+            isOneToOne: false;
+            referencedRelation: "api_slot";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profile";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      mcq_option: {
+        Row: {
+          explanation: string | null;
+          id: string;
+          is_correct: boolean;
+          label: string;
+          question_id: string;
+          text: string;
+        };
+        Insert: {
+          explanation?: string | null;
+          id?: string;
+          is_correct?: boolean;
+          label: string;
+          question_id: string;
+          text: string;
+        };
+        Update: {
+          explanation?: string | null;
+          id?: string;
+          is_correct?: boolean;
+          label?: string;
+          question_id?: string;
+          text?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "mcq_option_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: false;
+            referencedRelation: "question";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      question: {
+        Row: {
+          answer_notes: string | null;
+          chapter_id: string;
+          course_id: string;
+          created_at: string;
+          created_by: string | null;
+          figure_id: string | null;
+          id: string;
+          job_id: string | null;
+          kind: Database["public"]["Enums"]["question_kind"];
+          marks: number;
+          origin: Database["public"]["Enums"]["question_origin"];
+          source_page: number | null;
+          status: Database["public"]["Enums"]["question_status"];
+          text: string;
+          updated_at: string;
+        };
+        Insert: {
+          answer_notes?: string | null;
+          chapter_id: string;
+          course_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          figure_id?: string | null;
+          id?: string;
+          job_id?: string | null;
+          kind: Database["public"]["Enums"]["question_kind"];
+          marks?: number;
+          origin?: Database["public"]["Enums"]["question_origin"];
+          source_page?: number | null;
+          status?: Database["public"]["Enums"]["question_status"];
+          text: string;
+          updated_at?: string;
+        };
+        Update: {
+          answer_notes?: string | null;
+          chapter_id?: string;
+          course_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          figure_id?: string | null;
+          id?: string;
+          job_id?: string | null;
+          kind?: Database["public"]["Enums"]["question_kind"];
+          marks?: number;
+          origin?: Database["public"]["Enums"]["question_origin"];
+          source_page?: number | null;
+          status?: Database["public"]["Enums"]["question_status"];
+          text?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "question_chapter_id_course_id_fkey";
+            columns: ["chapter_id", "course_id"];
+            isOneToOne: false;
+            referencedRelation: "chapter";
+            referencedColumns: ["id", "course_id"];
+          },
+          {
+            foreignKeyName: "question_figure_id_fkey";
+            columns: ["figure_id"];
+            isOneToOne: false;
+            referencedRelation: "figure";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "question_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "job";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "question_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profile";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      question_set: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          exam_id: string;
+          id: string;
+          name: string;
+          origin: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          exam_id: string;
+          id?: string;
+          name: string;
+          origin: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          exam_id?: string;
+          id?: string;
+          name?: string;
+          origin?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "question_set_exam_id_fkey";
+            columns: ["exam_id"];
+            isOneToOne: false;
+            referencedRelation: "exam";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      question_set_item: {
+        Row: {
+          position: number;
+          question_id: string;
+          set_id: string;
+        };
+        Insert: {
+          position: number;
+          question_id: string;
+          set_id: string;
+        };
+        Update: {
+          position?: number;
+          question_id?: string;
+          set_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "question_set_item_question_id_fkey";
+            columns: ["question_id"];
+            isOneToOne: false;
+            referencedRelation: "question";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "question_set_item_set_id_fkey";
+            columns: ["set_id"];
+            isOneToOne: false;
+            referencedRelation: "question_set";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       invite: {
         Row: {
           code: string;
@@ -350,6 +644,18 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      claim_next_job: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      create_auto_set: {
+        Args: { p_exam_id: string; p_user: string };
+        Returns: string;
+      };
+      save_question: {
+        Args: { p_options: Json; p_question: Json };
+        Returns: string;
+      };
       create_invite: {
         Args: never;
         Returns: {
@@ -370,6 +676,9 @@ export type Database = {
     };
     Enums: {
       exam_format: "mcq" | "cq" | "both";
+      question_kind: "mcq" | "cq" | "problem";
+      question_origin: "manual" | "ai";
+      question_status: "draft" | "approved";
       user_role: "student" | "admin";
       user_status: "pending" | "active" | "disabled";
     };
@@ -386,3 +695,10 @@ export type ExamSetSettings = Database["public"]["Tables"]["exam_set_settings"][
 export type ExamFormat = Database["public"]["Enums"]["exam_format"];
 export type SourcePdf = Database["public"]["Tables"]["source_pdf"]["Row"];
 export type Figure = Database["public"]["Tables"]["figure"]["Row"];
+export type Question = Database["public"]["Tables"]["question"]["Row"];
+export type McqOption = Database["public"]["Tables"]["mcq_option"]["Row"];
+export type QuestionSet = Database["public"]["Tables"]["question_set"]["Row"];
+export type QuestionKind = Database["public"]["Enums"]["question_kind"];
+export type QuestionStatus = Database["public"]["Enums"]["question_status"];
+export type ApiSlot = Database["public"]["Tables"]["api_slot"]["Row"];
+export type Job = Database["public"]["Tables"]["job"]["Row"];
