@@ -7,12 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/ai/ai.test.ts src/lib/ai/grading.test.ts src/lib/practice.test.ts src/lib/cq.test.ts src/lib/ai/transcription.test.ts"
+    "test": "node --test src/lib/ai/ai.test.ts src/lib/ai/grading.test.ts src/lib/practice.test.ts src/lib/cq.test.ts src/lib/ai/transcription.test.ts src/lib/math-text.test.ts src/lib/ai/problem-grading.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
+    "mathlive": "^0.111.1",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",

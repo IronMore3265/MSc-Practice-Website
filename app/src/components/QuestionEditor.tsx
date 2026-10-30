@@ -97,8 +97,19 @@ export function QuestionEditor({ action, kind, courseId, chapterId, figures, que
         </div>
       ) : (
         <div className="field">
-          <label className="label" htmlFor="q-notes">Key points for grading</label>
-          <textarea id="q-notes" name="answer_notes" className="input textarea" rows={5} defaultValue={question?.answer_notes ?? ""} placeholder="One point per line, in the wording of the notes (optional)" />
+          <label className="label" htmlFor="q-notes">{kind === "problem" ? "Marking scheme" : "Key points for grading"}</label>
+          <textarea
+            id="q-notes"
+            name="answer_notes"
+            className="input textarea"
+            rows={kind === "problem" ? 7 : 5}
+            defaultValue={question?.answer_notes ?? ""}
+            placeholder={
+              kind === "problem"
+                ? "One step per line: the formula, the substitution, the intermediate steps, then \"Final answer: ... with its unit\". Math goes between dollar signs, for example $z=\\frac{14-10}{2}=2$. Optional, the AI works the problem out from the notes if this is empty."
+                : "One point per line, in the wording of the notes (optional)"
+            }
+          />
         </div>
       )}
 

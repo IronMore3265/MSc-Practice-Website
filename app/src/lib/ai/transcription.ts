@@ -26,12 +26,19 @@ export const TRANSCRIBE_SCHEMA = {
   required: ["readable", "text"],
 } as const;
 
-export function buildTranscribePrompt(a: { question: string; photoCount: number }): { system: string; user: string } {
+export function buildTranscribePrompt(a: { question: string; photoCount: number; kind?: "cq" | "problem" }): { system: string; user: string } {
   const system = [
     "You read a student's handwritten exam answer from photos and copy it out as text. You are a careful transcriber, not an examiner.",
     "Copy exactly what is written, in reading order, across all photos in the order given. Keep the student's own words, spelling and grammar mistakes. Do not correct, improve, summarise or complete anything.",
     "Keep line breaks between paragraphs, bullet points and numbered points as the student wrote them. Do not add headings or labels.",
     "If the student wrote an equation or formula, write it in LaTeX between dollar signs, for example Since $z=\\frac{14-10}{2}=2$ we use the table. Put only the formula itself between the dollar signs, never the words around it. Everything else stays plain text.",
+    ...(a.kind === "problem"
+      ? [
+          "This is a numerical problem, so the answer mixes sentences and working. Write one row per line of the handwriting, each on its own line of the output, in reading order.",
+          "A line that is only an equation or a calculation is written as a full-width equation: put it alone on its line between double dollar signs, for example $$P(X>14)=1-\\Phi(2)$$. A sentence with a formula inside it stays one line, with the formula between single dollar signs. Use proper LaTeX for fractions, powers, subscripts, roots, Greek letters and symbols.",
+          "Write the numbers exactly as the student wrote them, including units. Do not solve, check or tidy the working.",
+        ]
+      : []),
     "If a word or number is hard to read, give your best reading in the text and also list that exact piece of text in unsure with a very short reason (for example smudged, unclear letter, crossed out). Only list real doubts, at most 12.",
     "Each unsure text must be copied exactly as it appears in your transcription.",
     "The question is given only so you can tell similar-looking words apart. Never add words, points or facts from the question. If the student wrote nothing about the question, do not invent an answer.",

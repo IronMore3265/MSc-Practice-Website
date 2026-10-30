@@ -5,6 +5,7 @@ import { JobFatalError } from "./errors";
 import { generateJson, type InlineImage } from "./gemini";
 import { GRADE_SCHEMA, buildGradePrompt, validateGrade } from "./grading";
 import { purgeAttemptPhotos } from "./photos";
+import { PROBLEM_SCHEMA, buildProblemPrompt, validateProblemGrade } from "./problem-grading";
 
 type Db = SupabaseClient<Database>;
 
@@ -24,7 +25,7 @@ async function loadFigure(db: Db, figureId: string | null): Promise<{ image: Inl
   return { image, label: figure.label, page: figure.page };
 }
 
-// Grades one typed answer: reads the answer and the question from the database (never trusting the job payload for
+// Grades one answer (a CQ or a numerical problem): reads the answer and the question from the database (never trusting the job payload for
 // the answer text), asks Gemini, checks the grade strictly and saves it. Called only by the router.
 export async function runGradeJob(args: { db: Db; job: { id: string; user_id: string; payload: unknown }; apiKey: string; model: string }) {
   const { db, job } = args;
@@ -44,7 +45,7 @@ export async function runGradeJob(args: { db: Db; job: { id: string; user_id: st
     .select("id, text, marks, kind, answer_notes, figure_id, chapter_id, chapter(id, number, title, course(name))")
     .eq("id", attempt.question_id)
     .maybeSingle();
-  if (!question || question.kind !== "cq") throw new JobFatalError("The question no longer exists.");
+  if (!question || (question.kind !== "cq" && question.kind !== "problem")) throw new JobFatalError("The question no longer exists.");
   const chapter = question.chapter;
   if (!chapter) throw new JobFatalError("The chapter no longer exists.");
 
@@ -58,7 +59,7 @@ export async function runGradeJob(args: { db: Db; job: { id: string; user_id: st
   ]);
   if (!pages?.some((pg) => pg.text.trim().length >= 20)) throw new JobFatalError("This chapter has no extracted text.");
 
-  const { system, user } = buildGradePrompt({
+  const prompt = {
     courseName: chapter.course?.name ?? "the course",
     chapterNumber: chapter.number,
     chapterTitle: chapter.title,
@@ -69,18 +70,21 @@ export async function runGradeJob(args: { db: Db; job: { id: string; user_id: st
     answer: attempt.answer_text,
     pages,
     figures: figures ?? [],
-  });
+  };
+  const isProblem = question.kind === "problem";
+  const { system, user } = isProblem ? buildProblemPrompt(prompt) : buildGradePrompt(prompt);
 
   const raw = await generateJson({
     apiKey: args.apiKey,
     model: args.model,
     system,
     user,
-    schema: GRADE_SCHEMA,
+    schema: isProblem ? PROBLEM_SCHEMA : GRADE_SCHEMA,
     images: figure?.image ? [figure.image] : undefined,
     temperature: 0.2,
   });
-  const feedback = validateGrade(raw, { marks: question.marks, pageCount: pdf.page_count, figures: figures ?? [], answer: attempt.answer_text });
+  const ctx = { marks: question.marks, pageCount: pdf.page_count, figures: figures ?? [], answer: attempt.answer_text };
+  const feedback = isProblem ? validateProblemGrade(raw, ctx) : validateGrade(raw, ctx);
 
   const { error } = await db.rpc("record_cq_grade", { p_attempt: attempt.id, p_score: feedback.score, p_feedback: feedback as unknown as Json });
   if (error) throw new Error(`Could not save the grade: ${error.message}`);

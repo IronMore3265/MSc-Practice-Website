@@ -1,7 +1,7 @@
 // Question generation: the prompt, the JSON shape asked of Gemini, and strict checking of what comes back.
 // Pure functions only. Nothing here calls the API or the database.
 
-export type GenKind = "mcq" | "cq";
+export type GenKind = "mcq" | "cq" | "problem";
 export type PageText = { page: number; text: string };
 export type FigureRef = { id: string; label: string | null; page: number };
 
@@ -91,7 +91,14 @@ export function buildPrompt(a: {
           'Do not write "all of the above" or "none of the above". Do not use negative wording such as "which is NOT" unless it is the clearest way to ask.',
           "Leave key_points out.",
         ]
-      : [
+      : a.kind === "problem"
+        ? [
+            `Write ${a.count} numerical problems worth ${a.marks} marks each, the kind a lecturer sets for a written paper: a short scenario with all the data given, and a clear question to calculate or find.`,
+            "Each problem must be solvable by hand with the formulas, definitions and tables in the chapter text. Give every number the solution needs in the problem text, or name the table or figure that supplies it. Use LaTeX between single dollar signs for any formula or symbol in the question, for example $\\mu=10$.",
+            `For each, give key_points as the marking scheme: the formula to use, the substitution, the intermediate steps, the final answer with its unit (write it as "Final answer: ..."), and the page each comes from. About ${Math.max(3, Math.min(a.marks + 2, 8))} lines.`,
+            "Leave options out.",
+          ]
+        : [
           `Write ${a.count} descriptive questions worth ${a.marks} marks each, the kind a lecturer sets for a written paper ("Explain...", "Discuss...", "Compare...", "List and describe...").`,
           `For each, give key_points: the ${Math.max(2, Math.min(a.marks + 1, 8))} or so separate points a full-mark answer should cover, in the wording of the notes, each with the page it comes from.`,
           "Leave options out.",

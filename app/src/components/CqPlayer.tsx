@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { FeedbackCards } from "@/components/FeedbackCards";
 import { FigureCard } from "@/components/FigureCard";
 import { GradingProgress } from "@/components/GradingProgress";
+import { MathAnswerEditor } from "@/components/MathAnswerEditor";
 import { PhotoAnswer } from "@/components/PhotoAnswer";
 import { SnakeGame } from "@/components/SnakeGame";
 import { TranscriptionCheck } from "@/components/TranscriptionCheck";
-import { markFraction, type CqQuestion, type CqSessionPayload, type GradeFeedback, type JobPoll, type JobStatus } from "@/lib/cq";
+import { markFraction, type CqQuestion, type CqSessionPayload, type Feedback, type JobPoll, type JobStatus } from "@/lib/cq";
 import { formatClock } from "@/lib/practice";
 
 const POLL_MS = 3000;
@@ -18,7 +19,7 @@ type Live = { position: number | null; runningSince: number | null };
 type Mode = "type" | "photo";
 type Wait = { qid: string; jobId: string; kind: "grade" | "read" };
 
-// CQ practice (mockup screens 03, 04, 05, 07). One question at a time with a stopwatch. The answer is typed, or
+// CQ and numerical problem practice (mockup screens 03, 04, 05, 07, 11). One question at a time with a stopwatch. The answer is typed, or
 // photographed: photos are read by the AI, the student fixes the text, and then it is marked like a typed answer.
 // Submitting saves the answer and queues a grading job. While a job runs, the student can play a game or move
 // on to the next question. The page polls each waiting job, and every poll also nudges the router (plan 5b).
@@ -47,6 +48,7 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
   const answeredCount = questions.filter((x) => x.answered).length;
   const capReached = cap.used >= cap.limit;
   const mode: Mode = modes[q.id] ?? (q.photos.length > 0 || q.transcribe_job_id ? "photo" : "type");
+  const isProblem = q.kind === "problem";
   const draft = drafts[q.id] ?? "";
   const fix = fixes[q.id] ?? q.transcription ?? "";
 
@@ -108,7 +110,7 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
                 x.id !== qid
                   ? x
                   : status === "done"
-                    ? { ...x, job_status: "done" as JobStatus, graded: true, score: data.score ?? data.feedback?.score ?? 0, feedback: data.feedback as GradeFeedback }
+                    ? { ...x, job_status: "done" as JobStatus, graded: true, score: data.score ?? data.feedback?.score ?? 0, feedback: data.feedback as Feedback }
                     : { ...x, job_status: status },
               ),
             );
@@ -287,7 +289,7 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
     <main className="shell shell-practice">
       <div className="between">
         <p className="label">
-          {session.exam_name} / CQ · Q {index + 1} / {questions.length}
+          {session.exam_name} / {isProblem ? "Problem" : "CQ"} · Q {index + 1} / {questions.length}
         </p>
         {open ? (
           <span className="timer-pill" aria-live="off">
@@ -335,29 +337,41 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
 
       {shown === "typing" ? (
         <>
-          <div className="stack-sm">
-            <label className="label" htmlFor="cq-answer">
-              Your answer
-            </label>
-            <div className="field-box">
-              <textarea
-                id="cq-answer"
-                className="input textarea"
-                style={{ minHeight: 200 }}
-                maxLength={MAX_CHARS}
+          {isProblem ? (
+            <div className="stack-sm">
+              <p className="label">Your working</p>
+              <MathAnswerEditor
+                key={q.id}
                 value={draft}
                 disabled={busy}
-                onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
-                onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") void submit(draft);
-                }}
-                placeholder="Type your answer the way you would write it in the exam."
+                onChange={(text) => setDrafts((d) => (d[q.id] === text || (!text && d[q.id] === undefined) ? d : { ...d, [q.id]: text }))}
               />
             </div>
-            <p className="small muted answer-count">
-              {draft.length} / {MAX_CHARS}
-            </p>
-          </div>
+          ) : (
+            <div className="stack-sm">
+              <label className="label" htmlFor="cq-answer">
+                Your answer
+              </label>
+              <div className="field-box">
+                <textarea
+                  id="cq-answer"
+                  className="input textarea"
+                  style={{ minHeight: 200 }}
+                  maxLength={MAX_CHARS}
+                  value={draft}
+                  disabled={busy}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") void submit(draft);
+                  }}
+                  placeholder="Type your answer the way you would write it in the exam."
+                />
+              </div>
+              <p className="small muted answer-count">
+                {draft.length} / {MAX_CHARS}
+              </p>
+            </div>
+          )}
           <p className="small muted">
             AI gradings used today: {cap.used} of {cap.limit}. {capReached ? "You have none left today, they reset at midnight Bangladesh time." : "Each submit uses one."}
           </p>
@@ -370,7 +384,7 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
             ) : (
               <span />
             )}
-            <button type="button" className="btn btn-primary" disabled={busy || draft.trim().length < 3 || capReached} onClick={() => void submit(draft)}>
+            <button type="button" className="btn btn-primary" disabled={busy || draft.trim().length < 3 || draft.length > MAX_CHARS || capReached} onClick={() => void submit(draft)}>
               {busy ? "Sending..." : "Submit for marking"}
             </button>
           </div>
@@ -429,10 +443,12 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
 
       {shown === "check" ? (
         <TranscriptionCheck
+          key={`${q.id}-${q.transcribe_job_id}`}
           attemptId={q.attempt_id}
           photos={q.photos}
           text={fix}
           unsure={q.unsure}
+          problem={isProblem}
           busy={busy}
           error={error}
           onText={(text) => setFixes((f) => ({ ...f, [q.id]: text }))}
@@ -444,7 +460,7 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
       {shown === "waiting" ? (
         <>
           <div className="dashed stack-sm">
-            <GradingProgress status={job} position={live[q.id]?.position ?? null} runningSince={live[q.id]?.runningSince ?? null} />
+            <GradingProgress status={job} problem={isProblem} position={live[q.id]?.position ?? null} runningSince={live[q.id]?.runningSince ?? null} />
             {q.graded ? (
               <button
                 type="button"

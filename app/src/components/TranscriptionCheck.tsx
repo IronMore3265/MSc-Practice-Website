@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { MathAnswerEditor } from "@/components/MathAnswerEditor";
 import type { UnsurePart } from "@/lib/cq";
 
 const MAX_CHARS = 8000;
@@ -13,6 +14,7 @@ export function TranscriptionCheck({
   photos,
   text,
   unsure,
+  problem = false,
   busy,
   error,
   onText,
@@ -23,6 +25,7 @@ export function TranscriptionCheck({
   photos: string[];
   text: string;
   unsure: UnsurePart[];
+  problem?: boolean; // a numerical problem: the text is fixed in the math editor, rows with equations
   busy: boolean;
   error: string | null;
   onText: (text: string) => void;
@@ -52,7 +55,9 @@ export function TranscriptionCheck({
     <div className="stack-sm">
       <p className="label label-orange">Check what was read</p>
       <p className="small">
-        This is what we read from your handwriting. Fix anything that is wrong, because this text is what gets marked.
+        {problem
+          ? "This is what we read from your handwriting, sentences as text rows and equations as math. Fix anything that is wrong, because these rows are what gets marked. Your photos stay above while you fix."
+          : "This is what we read from your handwriting. Fix anything that is wrong, because this text is what gets marked."}
       </p>
 
       <div className="photo-grid">
@@ -70,44 +75,50 @@ export function TranscriptionCheck({
         ))}
       </div>
 
-      {unsure.length > 0 ? (
-        <div className="stack-sm">
-          <p className="label">{pending.length > 0 ? `${pending.length} part${pending.length === 1 ? "" : "s"} to check` : "All doubtful parts checked"}</p>
-          <div className="row-wrap">
-            {unsure.map((u) => {
-              const done = seen[u.text] || !text.includes(u.text);
-              return (
-                <button key={u.text} type="button" className={`chip ${done ? "chip-muted" : "chip-now"}`} onClick={() => jump(u)} title={u.reason ?? undefined}>
-                  {u.text}
-                  {u.reason ? ` (${u.reason})` : ""}
-                </button>
-              );
-            })}
+      {problem ? (
+        <MathAnswerEditor value={text} disabled={busy} unsure={unsure} onChange={onText} />
+      ) : (
+        <>
+        {unsure.length > 0 ? (
+          <div className="stack-sm">
+            <p className="label">{pending.length > 0 ? `${pending.length} part${pending.length === 1 ? "" : "s"} to check` : "All doubtful parts checked"}</p>
+            <div className="row-wrap">
+              {unsure.map((u) => {
+                const done = seen[u.text] || !text.includes(u.text);
+                return (
+                  <button key={u.text} type="button" className={`chip ${done ? "chip-muted" : "chip-now"}`} onClick={() => jump(u)} title={u.reason ?? undefined}>
+                    {u.text}
+                    {u.reason ? ` (${u.reason})` : ""}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <div className="field-box">
-        <textarea
-          ref={box}
-          className="input textarea"
-          style={{ minHeight: 220 }}
-          maxLength={MAX_CHARS}
-          value={text}
-          disabled={busy}
-          aria-label="The text read from your photos"
-          onChange={(e) => onText(e.target.value)}
-        />
-      </div>
-      <p className="small muted answer-count">
-        {text.length} / {MAX_CHARS}
-      </p>
+        <div className="field-box">
+          <textarea
+            ref={box}
+            className="input textarea"
+            style={{ minHeight: 220 }}
+            maxLength={MAX_CHARS}
+            value={text}
+            disabled={busy}
+            aria-label="The text read from your photos"
+            onChange={(e) => onText(e.target.value)}
+          />
+        </div>
+        <p className="small muted answer-count">
+          {text.length} / {MAX_CHARS}
+        </p>
+        </>
+      )}
       {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
       <div className="between">
         <button type="button" className="btn" disabled={busy} onClick={onStartOver}>
           Start over with new photos
         </button>
-        <button type="button" className="btn btn-primary" disabled={busy || text.trim().length < 3} onClick={onSubmit}>
+        <button type="button" className="btn btn-primary" disabled={busy || text.trim().length < 3 || text.length > MAX_CHARS} onClick={onSubmit}>
           {busy ? "Sending..." : "Looks right, submit for marking"}
         </button>
       </div>

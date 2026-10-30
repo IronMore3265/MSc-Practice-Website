@@ -1,10 +1,16 @@
-import type { GradeFeedback } from "@/lib/cq";
+import { ProblemFeedbackCards } from "@/components/ProblemFeedbackCards";
+import { isProblemFeedback, type Feedback, type GradeFeedback } from "@/lib/cq";
 
 const pageNote = (page: number | null) => (page ? `p. ${page}` : null);
 
 // CQ feedback (mockup screen 05): each part of the grade is its own card. Orange is only for missing points
 // and accents. Page numbers and figure labels were checked against the chapter before they got here.
-export function FeedbackCards({ feedback, chapterNumber, answer }: { feedback: GradeFeedback; chapterNumber: number; answer?: string | null }) {
+export function FeedbackCards({ feedback, chapterNumber, answer }: { feedback: Feedback; chapterNumber: number; answer?: string | null }) {
+  if (isProblemFeedback(feedback)) return <ProblemFeedbackCards feedback={feedback} chapterNumber={chapterNumber} answer={answer} />;
+  return <CqFeedbackCards feedback={feedback} chapterNumber={chapterNumber} answer={answer} />;
+}
+
+function CqFeedbackCards({ feedback, chapterNumber, answer }: { feedback: GradeFeedback; chapterNumber: number; answer?: string | null }) {
   const f = feedback;
   const notes = `Ch ${chapterNumber} notes`;
   return (

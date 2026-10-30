@@ -141,9 +141,9 @@ export async function generateQuestions(_prev: ActionState, form: FormData): Pro
   const count = whole(form, "count", 1, MAX_GENERATE_COUNT);
   const marksEach = whole(form, "marks", 1, 100);
   if (!chapterId) return bad("Pick a chapter.");
-  if (kind !== "mcq" && kind !== "cq") return bad("Pick MCQ or CQ.");
+  if (kind !== "mcq" && kind !== "cq" && kind !== "problem") return bad("Pick MCQ, CQ or Problem.");
   if (count === null) return bad(`Count must be from 1 to ${MAX_GENERATE_COUNT}.`);
-  if (kind === "cq" && marksEach === null) return bad("Marks must be a whole number.");
+  if (kind !== "mcq" && marksEach === null) return bad("Marks must be a whole number.");
 
   const db = createAdminClient();
   const { data: chapter } = await db.from("chapter").select("id, course_id, source_pdf(id)").eq("id", chapterId).maybeSingle();

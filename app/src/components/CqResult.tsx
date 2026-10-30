@@ -80,7 +80,7 @@ export function CqResult({ payload }: { payload: CqSessionPayload }) {
         {questions.map((q) => (
           <details key={q.id} className="card" open={failed.length > 0 && failed.includes(q)}>
             <summary className="review-summary">
-              <span className="row-name">Q{q.position + 1} (CQ)</span>
+              <span className="row-name">Q{q.position + 1} ({q.kind === "problem" ? "Problem" : "CQ"})</span>
               <span className="small muted">
                 Chapter {q.chapter_number}
                 {q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}

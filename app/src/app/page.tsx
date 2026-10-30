@@ -96,7 +96,7 @@ export default async function HomePage() {
             const cqByChapter: Record<string, number> = {};
             for (const item of s.question_set_item) {
               if (!item.question) continue;
-              const bucket = item.question.kind === "mcq" ? mcqByChapter : item.question.kind === "cq" ? cqByChapter : null;
+              const bucket = item.question.kind === "mcq" ? mcqByChapter : item.question.kind === "cq" || item.question.kind === "problem" ? cqByChapter : null;
               if (bucket) bucket[item.question.chapter_id] = (bucket[item.question.chapter_id] ?? 0) + 1;
             }
             const h = history.get(s.id);

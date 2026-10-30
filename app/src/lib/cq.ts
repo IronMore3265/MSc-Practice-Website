@@ -18,11 +18,32 @@ export type GradeFeedback = {
   improved_answer: string;
 };
 
+// What the grader returns for a numerical problem (plan 7b). Rows are numbered from 1 in the order of the stored
+// answer (see parseRows in math-text.ts). Texts may contain math between dollar signs.
+export type ProblemFeedback = {
+  kind: "problem";
+  score: number;
+  out_of: number;
+  steps: { row: number; status: "ok" | "wrong" | "unclear"; comment: string | null }[];
+  first_wrong_row: number | null;
+  final_answer: { expected: string; student: string | null; correct: boolean; units_ok: boolean | null; note: string | null };
+  covered_points: string[];
+  missing_points: { point: string; source_page: number | null; figure: string | null }[];
+  incorrect_claims: { claim: string; correction: string; source_page: number | null }[];
+  worked_solution: string;
+};
+
+export type Feedback = GradeFeedback | ProblemFeedback;
+export const isProblemFeedback = (f: Feedback): f is ProblemFeedback => "kind" in f && f.kind === "problem";
+
+export type QuestionKind = "cq" | "problem";
+
 // A part of a transcription the reader was unsure about (plan 7b). The text is copied from the transcription.
 export type UnsurePart = { text: string; reason: string | null };
 
 export type CqQuestion = {
   id: string;
+  kind: QuestionKind;
   attempt_id: string;
   position: number;
   text: string;
@@ -43,7 +64,7 @@ export type CqQuestion = {
   job_status: JobStatus | null;
   graded: boolean;
   score: number | null;
-  feedback: GradeFeedback | null;
+  feedback: Feedback | null;
 };
 
 export type CqSessionInfo = {
@@ -72,13 +93,16 @@ export type JobPoll = {
   job: { id: string; kind: string; status: JobStatus; attempts: number; created_at: string; started_at: string | null; finished_at: string | null };
   position: number | null;
   score?: number | null;
-  feedback?: GradeFeedback | null;
+  feedback?: Feedback | null;
   transcription?: string | null; // a finished reading job carries the text and what it was unsure about
   unsure?: UnsurePart[];
 };
 
 // Typed answers skip the "handwriting read" step, so four steps are shown (plan 5c).
 export const GRADE_STEPS = ["Answer received", "Matching with your notes", "Checking grammar", "Scoring and feedback"] as const;
+
+// Numerical problems check the calculations instead of the grammar (plan 7b).
+export const PROBLEM_STEPS = ["Answer received", "Matching with your notes", "Checking calculations", "Scoring and feedback"] as const;
 
 // Steps shown while the handwriting is read. The marking steps above follow once the student confirms the text.
 export const READ_STEPS = ["Photos received", "Reading your handwriting", "Checking the text"] as const;

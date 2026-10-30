@@ -870,3 +870,273 @@ p {
 .photo-card:has(.photo-big) {
   grid-column: 1 / -1;
 }
+
+/* Math editor and math display (phase 7, plan 7b and section 11) */
+math-field {
+  font-size: 1.15em;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0 3px;
+  color: var(--ink);
+  --caret-color: var(--orange);
+  --selection-background-color: rgba(255, 107, 26, 0.3);
+  --selection-color: var(--ink);
+  --placeholder-color: var(--orange);
+  --placeholder-opacity: 0.6;
+  --contains-highlight-background-color: rgba(255, 107, 26, 0.15);
+}
+
+.mrows math-field {
+  display: inline-block;
+  min-width: 1.4em;
+  border-bottom: 1.5px solid var(--muted);
+  border-radius: 2px;
+}
+
+.mrows math-field:focus-within {
+  border-bottom-color: var(--orange);
+  background: rgba(255, 107, 26, 0.08);
+}
+
+.math-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.math-line {
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.math-eq {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+
+.math-inline {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.mrows {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 var(--ink);
+  margin-right: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mrows > p {
+  padding: 14px;
+}
+
+.mrow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 8px 8px 6px;
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid rgba(28, 26, 22, 0.15);
+}
+
+.mrow:last-child {
+  border-bottom: none;
+}
+
+.mrow-active {
+  border-left-color: var(--orange);
+  background: rgba(255, 107, 26, 0.05);
+}
+
+.mrow-no {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding-top: 6px;
+  text-align: right;
+}
+
+.mrow-body {
+  min-width: 0;
+}
+
+.mrow-unsure .mrow-body {
+  border-bottom: 2px solid var(--orange);
+}
+
+.mrow-text {
+  min-height: 34px;
+  padding: 5px 2px;
+  font-size: 15px;
+  line-height: 2;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mrow-text:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.mrow-eq {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
+  overflow-x: auto;
+}
+
+.mrow-eq math-field {
+  font-size: 1.3em;
+  min-width: 60%;
+  text-align: center;
+}
+
+.mrow-tools {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 92px;
+}
+
+.mtool {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: transparent;
+}
+
+.mtool-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.mtool-group > .label {
+  min-width: 56px;
+}
+
+.mtool-more {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--ink);
+}
+
+.mkey {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 2px 8px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.mkey:active,
+.mkey[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.mkey:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mkey-wide {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 12px;
+}
+
+.mkey-small {
+  min-width: 30px;
+  min-height: 30px;
+  font-size: 12px;
+  padding: 0 6px;
+}
+
+/* Feedback for numerical problems: the student's rows with the first wrong step marked */
+.prow {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 8px;
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid rgba(28, 26, 22, 0.12);
+}
+
+.prow:last-child {
+  border-bottom: none;
+}
+
+.prow-wrong {
+  border-left-color: var(--orange);
+  background: rgba(255, 107, 26, 0.08);
+}
+
+.prow-no {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding-top: 3px;
+  text-align: right;
+}
+
+.prow-note {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+@media (max-width: 520px) {
+  .mrow {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+  .mrow-tools {
+    grid-column: 2;
+    max-width: none;
+    justify-content: flex-start;
+  }
+}
+
+/* The menu button inside every math box would crowd a sentence. The editor has its own toolbar. */
+math-field::part(menu-toggle) {
+  display: none;
+}
+
+/* On a phone the tool rows scroll sideways instead of taking half the screen */
+@media (max-width: 520px) {
+  .mtool-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .mtool-group > * {
+    flex: none;
+  }
+  .mtool-more .mtool-group {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}

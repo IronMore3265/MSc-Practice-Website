@@ -13,7 +13,7 @@ export function parseGeneratePayload(p: unknown): GeneratePayload {
   const o = (p ?? {}) as Record<string, unknown>;
   const count = Number(o.count);
   const marks = Number(o.marks);
-  if (typeof o.chapter_id !== "string" || typeof o.course_id !== "string" || (o.kind !== "mcq" && o.kind !== "cq")) {
+  if (typeof o.chapter_id !== "string" || typeof o.course_id !== "string" || (o.kind !== "mcq" && o.kind !== "cq" && o.kind !== "problem")) {
     throw new JobFatalError("The job is missing its chapter or question type.");
   }
   if (!Number.isInteger(count) || count < 1 || count > MAX_GENERATE_COUNT || !Number.isInteger(marks) || marks < 1 || marks > 100) {

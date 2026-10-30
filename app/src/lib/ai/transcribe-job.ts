@@ -31,7 +31,7 @@ export async function runTranscribeJob(args: { db: Db; job: { id: string; user_i
   if (!paths.length) throw new JobFatalError("The photos are gone.");
 
   const { data: question } = await db.from("question").select("id, text, kind").eq("id", attempt.question_id).maybeSingle();
-  if (!question || question.kind !== "cq") throw new JobFatalError("The question no longer exists.");
+  if (!question || (question.kind !== "cq" && question.kind !== "problem")) throw new JobFatalError("The question no longer exists.");
 
   const images: InlineImage[] = [];
   for (const path of paths) {
@@ -40,7 +40,7 @@ export async function runTranscribeJob(args: { db: Db; job: { id: string; user_i
     images.push({ mimeType: "image/jpeg", data: Buffer.from(await file.arrayBuffer()).toString("base64") });
   }
 
-  const { system, user } = buildTranscribePrompt({ question: question.text, photoCount: images.length });
+  const { system, user } = buildTranscribePrompt({ question: question.text, photoCount: images.length, kind: question.kind });
   const raw = await generateJson({ apiKey: args.apiKey, model: args.model, system, user, schema: TRANSCRIBE_SCHEMA, images, temperature: 0.1 });
   const reading = validateTranscription(raw);
 

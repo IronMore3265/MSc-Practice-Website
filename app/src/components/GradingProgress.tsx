@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GRADE_STEPS, READ_STEPS, gradingProgress, type JobStatus } from "@/lib/cq";
+import { GRADE_STEPS, PROBLEM_STEPS, READ_STEPS, gradingProgress, type JobStatus } from "@/lib/cq";
 
 // Staged progress while the answer is read or marked (mockup screen 07, plan 5c). Queue position and the moment the
 // job starts are real. The middle steps are timed to match the single AI call, so the bar is labelled "Estimated".
@@ -11,11 +11,13 @@ export function GradingProgress({
   position,
   runningSince,
   kind = "grade",
+  problem = false,
 }: {
   status: JobStatus;
   position: number | null;
   runningSince: number | null;
   kind?: "grade" | "read";
+  problem?: boolean; // a numerical problem: "Checking calculations" instead of "Checking grammar"
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -24,7 +26,7 @@ export function GradingProgress({
     return () => clearInterval(timer);
   }, [status]);
 
-  const steps = kind === "read" ? READ_STEPS : GRADE_STEPS;
+  const steps = kind === "read" ? READ_STEPS : problem ? PROBLEM_STEPS : GRADE_STEPS;
   const view = gradingProgress({ status, position, runningMs: runningSince ? now - runningSince : 0, steps: steps.length });
 
   return (

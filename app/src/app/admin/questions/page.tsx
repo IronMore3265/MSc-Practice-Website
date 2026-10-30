@@ -131,6 +131,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Se
               <select id="gen-kind" name="kind" className="select input-sm" defaultValue="mcq">
                 <option value="mcq">MCQ</option>
                 <option value="cq">CQ</option>
+                <option value="problem">Problem</option>
               </select>
             </div>
             <div className="field">
@@ -138,7 +139,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Se
               <input id="gen-count" name="count" inputMode="numeric" className="input input-sm" defaultValue="5" />
             </div>
             <div className="field">
-              <label className="label" htmlFor="gen-marks">CQ marks each</label>
+              <label className="label" htmlFor="gen-marks">CQ or problem marks each</label>
               <input id="gen-marks" name="marks" inputMode="numeric" className="input input-sm" defaultValue="5" />
             </div>
           </ActionForm>
@@ -154,7 +155,7 @@ export default async function QuestionsPage({ searchParams }: { searchParams: Se
               return (
                 <div key={j.id} className="row">
                   <span className="small">
-                    {p.count} {p.kind === "cq" ? "CQ" : "MCQ"}, Ch {chapterNumber.get(p.chapter_id ?? "") ?? "?"}
+                    {p.count} {p.kind === "cq" ? "CQ" : p.kind === "problem" ? "Problem" : "MCQ"}, Ch {chapterNumber.get(p.chapter_id ?? "") ?? "?"}
                     {j.status === "done" ? (
                       <>
                         {" "}
