@@ -11,11 +11,18 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// The start of today in Bangladesh time (UTC+6, no daylight saving), as a UTC timestamp. The daily AI grading cap resets then.
+function startOfDhakaDay() {
+  const shifted = new Date(Date.now() + 6 * 3600_000);
+  shifted.setUTCHours(0, 0, 0, 0);
+  return new Date(shifted.getTime() - 6 * 3600_000).toISOString();
+}
+
 export default async function HomePage() {
   const { profile } = await requireActive();
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: invites }, { data: runs }, { data: open }] = await Promise.all([
+  const [{ data: courses }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }] = await Promise.all([
     supabase
       .from("course")
       .select(
@@ -29,7 +36,7 @@ export default async function HomePage() {
     // Finished full-set sessions (not retries of missed questions), newest first, for "Set 1 · 80%".
     supabase
       .from("session_run")
-      .select("set_id, score, max_score")
+      .select("set_id, sections, score, max_score")
       .eq("user_id", profile.id)
       .is("retry_of", null)
       .not("set_id", "is", null)
@@ -45,14 +52,27 @@ export default async function HomePage() {
       .or(`mcq_deadline_at.is.null,mcq_deadline_at.gt.${nowIso()}`)
       .order("started_at", { ascending: false })
       .limit(1),
+    // AI gradings used today. Failed jobs do not count, same rule as the database.
+    supabase
+      .from("job")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", profile.id)
+      .eq("kind", "grade")
+      .neq("status", "failed")
+      .gte("created_at", startOfDhakaDay()),
   ]);
 
-  const history = new Map<string, { attempts: number; lastPercent: number | null }>();
+  // MCQ history drives the "Set 1 · 80%" pills. CQ sessions are only counted, their marks arrive after AI grading.
+  const history = new Map<string, { attempts: number; cqAttempts: number; lastPercent: number | null }>();
   for (const r of runs ?? []) {
     if (!r.set_id) continue;
-    const h = history.get(r.set_id) ?? { attempts: 0, lastPercent: null };
-    h.attempts += 1;
-    if (h.lastPercent === null && r.score !== null && r.max_score !== null) h.lastPercent = percent(r.score, r.max_score);
+    const h = history.get(r.set_id) ?? { attempts: 0, cqAttempts: 0, lastPercent: null };
+    if (r.sections.includes("cq")) {
+      h.cqAttempts += 1;
+    } else {
+      h.attempts += 1;
+      if (h.lastPercent === null && r.score !== null && r.max_score !== null) h.lastPercent = percent(r.score, r.max_score);
+    }
     history.set(r.set_id, h);
   }
 
@@ -73,13 +93,14 @@ export default async function HomePage() {
           .sort((a, b) => a.created_at.localeCompare(b.created_at))
           .map((s) => {
             const mcqByChapter: Record<string, number> = {};
+            const cqByChapter: Record<string, number> = {};
             for (const item of s.question_set_item) {
-              if (item.question && item.question.kind === "mcq") {
-                mcqByChapter[item.question.chapter_id] = (mcqByChapter[item.question.chapter_id] ?? 0) + 1;
-              }
+              if (!item.question) continue;
+              const bucket = item.question.kind === "mcq" ? mcqByChapter : item.question.kind === "cq" ? cqByChapter : null;
+              if (bucket) bucket[item.question.chapter_id] = (bucket[item.question.chapter_id] ?? 0) + 1;
             }
             const h = history.get(s.id);
-            return { id: s.id, name: s.name, mcqByChapter, attempts: h?.attempts ?? 0, lastPercent: h?.lastPercent ?? null };
+            return { id: s.id, name: s.name, mcqByChapter, cqByChapter, attempts: h?.attempts ?? 0, cqAttempts: h?.cqAttempts ?? 0, lastPercent: h?.lastPercent ?? null };
           }),
       })),
   }));
@@ -123,7 +144,7 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      <StartPractice courses={courseViews} />
+      <StartPractice courses={courseViews} cap={{ used: gradesToday ?? 0, limit: profile.daily_cap }} />
 
       <InvitePanel invites={toInviteViews(invites ?? [])} limit={isAdmin ? null : profile.invite_limit} />
 

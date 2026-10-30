@@ -677,3 +677,152 @@ p {
   gap: 12px;
   cursor: pointer;
 }
+
+/* CQ practice (Phase 5): typing screen, staged progress, game, feedback. Plan sections 5c and 11. */
+.segment-wait {
+  border-style: dashed;
+  background: transparent;
+}
+
+.segment-mid {
+  background: linear-gradient(90deg, var(--orange) 50%, transparent 50%);
+  border-color: var(--ink);
+}
+
+.answer-count {
+  text-align: right;
+}
+
+/* Staged progress: dashed rows, DONE chip black with orange text, NOW chip orange, waiting in muted text */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1.5px dashed var(--ink);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.step-wait {
+  color: var(--muted);
+  border-color: var(--muted);
+}
+
+.step-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.pop {
+  position: absolute;
+  right: 104px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  background: var(--orange);
+  pointer-events: none;
+  animation: pop 0.7s steps(7) 1 forwards;
+}
+
+@keyframes pop {
+  0% {
+    box-shadow: 0 0 0 0 var(--orange), 0 0 0 0 var(--orange), 0 0 0 0 var(--orange), 0 0 0 0 var(--orange);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 14px -10px 0 0 var(--orange), -14px -10px 0 0 var(--orange), 14px 10px 0 0 var(--orange), -14px 10px 0 0 var(--orange);
+    opacity: 0;
+  }
+}
+
+.bar-estimated .bar-fill {
+  transition: width 0.9s ease-out;
+}
+
+.bar-fast .bar-fill {
+  transition: width 0.4s ease-out;
+}
+
+/* Game panel: same as the answer box (black shadow), pixel board in cream, ink and orange */
+.game {
+  background: var(--card);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: 6px 6px 0 var(--ink);
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+
+.game canvas {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+  background: var(--bg);
+  border: 2px solid var(--ink);
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+/* Feedback cards: 1px ink border, small uppercase label, orange only for missing points and accents */
+.fb {
+  background: var(--card);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fb ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fb li {
+  font-size: 14px;
+}
+
+.fb-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+
+.fb-old {
+  text-decoration: line-through;
+  text-decoration-color: var(--orange);
+  color: var(--muted);
+}
+
+.pre {
+  white-space: pre-line;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop {
+    animation: none;
+    opacity: 0;
+  }
+  .bar-estimated .bar-fill,
+  .bar-fast .bar-fill {
+    transition: none;
+  }
+}

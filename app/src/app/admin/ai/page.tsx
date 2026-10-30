@@ -4,7 +4,7 @@ import { JobWatcher } from "@/components/JobWatcher";
 import { slotSpecs } from "@/lib/ai/slots";
 import { createClient } from "@/lib/supabase/server";
 import { retryJob } from "../questions/actions";
-import { setSlotEnabled, setSlotPace } from "./actions";
+import { setKeyEnabled, setSlotEnabled, setSlotPace } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +14,21 @@ function wait(until: string | null) {
   return s > 0 ? s : null;
 }
 
+function ageSeconds(since: string) {
+  return Math.max(0, Math.round((Date.now() - new Date(since).getTime()) / 1000));
+}
+
 export default async function AiRouterPage() {
   const supabase = await createClient();
-  const [{ data: slots }, { data: jobs }] = await Promise.all([
+  const [{ data: slots }, { data: jobs }, { data: waitingJobs }] = await Promise.all([
     supabase.from("api_slot").select("*").order("priority"),
     supabase.from("job").select("id, kind, status, attempts, error, created_at, finished_at").order("created_at", { ascending: false }).limit(12),
+    supabase.from("job").select("kind, status, created_at").in("status", ["queued", "running"]).order("created_at"),
   ]);
+  const keys = [...new Set((slots ?? []).map((s) => s.key_name))].sort();
+  const waitByKind = new Map<string, number>();
+  for (const j of waitingJobs ?? []) waitByKind.set(j.kind, (waitByKind.get(j.kind) ?? 0) + 1);
+  const oldest = waitingJobs?.[0] ? ageSeconds(waitingJobs[0].created_at) : null;
 
   const counts = { queued: 0, running: 0, done: 0, failed: 0 } as Record<string, number>;
   for (const j of jobs ?? []) counts[j.status] = (counts[j.status] ?? 0) + 1;
@@ -38,6 +47,28 @@ export default async function AiRouterPage() {
         </p>
         <RouterControls waiting={active.length > 0} />
       </div>
+
+      {keys.length > 0 ? (
+        <div className="card rows">
+          {keys.map((k) => {
+            const on = (slots ?? []).some((s) => s.key_name === k && s.enabled);
+            return (
+              <div key={k} className="row">
+                <span className="small">
+                  <span className="row-name">Key {k}</span>
+                  <span className="muted" style={{ display: "block" }}>
+                    {k === "B" ? "Second Google project. Switch it off if its use is ever in doubt." : "First Google project."}
+                  </span>
+                </span>
+                <ActionForm action={setKeyEnabled} submitLabel={on ? "Switch off" : "Switch on"} buttonClass="btn btn-small">
+                  <input type="hidden" name="key_name" value={k} />
+                  <input type="hidden" name="enabled" value={on ? "false" : "true"} />
+                </ActionForm>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="card rows">
         {(slots ?? []).map((s) => {
@@ -85,7 +116,11 @@ export default async function AiRouterPage() {
       <div className="stack-sm">
         <p className="label">Queue, latest jobs</p>
         <p className="small muted">
-          {counts.queued} waiting · {counts.running} running · {counts.done} done · {counts.failed} failed
+          {counts.queued} waiting · {counts.running} running · {counts.done} done · {counts.failed} failed (latest 12)
+        </p>
+        <p className="small muted">
+          Waiting or running now: {(waitingJobs ?? []).length === 0 ? "nothing" : [...waitByKind.entries()].map(([k, n]) => `${n} ${k}`).join(", ")}
+          {oldest !== null ? `. Oldest has waited ${oldest} s.` : "."} Marking jobs go before question generation.
         </p>
         <div className="card rows">
           {(jobs ?? []).map((j) => (

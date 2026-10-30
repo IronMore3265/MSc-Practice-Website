@@ -33,3 +33,16 @@ export async function setSlotPace(_prev: ActionState, form: FormData): Promise<A
   revalidatePath("/admin/ai");
   return done("Saved.");
 }
+
+// One switch for both slots of a Google project. Plan 5b: Key B must be easy to turn off if its use is ever in doubt.
+export async function setKeyEnabled(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const key = String(form.get("key_name") ?? "");
+  const enabled = String(form.get("enabled") ?? "") === "true";
+  if (key !== "A" && key !== "B") return bad("Unknown key.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("api_slot").update({ enabled }).eq("key_name", key);
+  if (error) return bad("Could not change the key.");
+  revalidatePath("/admin/ai");
+  return done(enabled ? `Key ${key} on.` : `Key ${key} off.`);
+}

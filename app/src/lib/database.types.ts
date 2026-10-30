@@ -720,7 +720,11 @@ export type Database = {
       };
       attempt: {
         Row: {
+          answer_text: string | null;
           answered_at: string | null;
+          feedback: Json | null;
+          graded_at: string | null;
+          job_id: string | null;
           id: string;
           is_correct: boolean | null;
           position: number;
@@ -732,7 +736,11 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          answer_text?: string | null;
           answered_at?: string | null;
+          feedback?: Json | null;
+          graded_at?: string | null;
+          job_id?: string | null;
           id?: string;
           is_correct?: boolean | null;
           position: number;
@@ -744,7 +752,11 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          answer_text?: string | null;
           answered_at?: string | null;
+          feedback?: Json | null;
+          graded_at?: string | null;
+          job_id?: string | null;
           id?: string;
           is_correct?: boolean | null;
           position?: number;
@@ -756,6 +768,13 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "attempt_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "job";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "attempt_question_id_fkey";
             columns: ["question_id"];
@@ -846,6 +865,10 @@ export type Database = {
       get_session: { Args: { p_session: string }; Returns: Json };
       answer_mcq: { Args: { p_option: string; p_question: string; p_session: string }; Returns: Json };
       finish_mcq_session: { Args: { p_session: string }; Returns: Json };
+      start_cq_session: { Args: { p_set_id: string; p_chapter_ids?: string[] }; Returns: string };
+      get_cq_session: { Args: { p_session: string }; Returns: Json };
+      submit_cq_answer: { Args: { p_session: string; p_question: string; p_answer: string; p_seconds?: number }; Returns: Json };
+      record_cq_grade: { Args: { p_attempt: string; p_score: number; p_feedback: Json }; Returns: undefined };
     };
     Enums: {
       exam_format: "mcq" | "cq" | "both";

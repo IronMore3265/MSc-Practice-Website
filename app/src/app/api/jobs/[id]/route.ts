@@ -21,7 +21,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   const supabase = await createClient();
   const { data: job } = await supabase
     .from("job")
-    .select("id, kind, status, attempts, error, result, created_at, finished_at, priority")
+    .select("id, kind, status, attempts, payload, created_at, started_at, finished_at, priority")
     .eq("id", id)
     .maybeSingle();
   if (!job) return NextResponse.json({ error: "Not found." }, { status: 404 });
@@ -42,5 +42,17 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     });
   }
 
-  return NextResponse.json({ job, position });
+  // A finished grading job carries its feedback, read through row level security from the student's own attempt.
+  // Raw job errors and payloads stay on the server, the student only needs to know that it failed.
+  let graded: { score: number; feedback: unknown } | null = null;
+  const attemptId = (job.payload as { attempt_id?: unknown } | null)?.attempt_id;
+  if (job.kind === "grade" && job.status === "done" && typeof attemptId === "string") {
+    const { data: attempt } = await supabase.from("attempt").select("score, feedback, graded_at").eq("id", attemptId).maybeSingle();
+    if (attempt?.graded_at) graded = { score: attempt.score, feedback: attempt.feedback };
+  }
+
+  const { payload: _payload, priority: _priority, ...visible } = job;
+  void _payload;
+  void _priority;
+  return NextResponse.json({ job: visible, position, ...(graded ?? {}) });
 }

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/lib/database.types";
 import { JobFatalError, classifyError } from "./errors";
 import { runGenerateJob } from "./generate-job";
+import { runGradeJob } from "./grade-job";
 import { apiKeyFor, slotSpecs } from "./slots";
 
 // The request router and queue (plan 5b). A "tick" claims one waiting job on a ready slot and runs it.
@@ -18,6 +19,7 @@ type Handler = (a: { db: Db; job: Claim["job"]; apiKey: string; model: string })
 
 const HANDLERS: Record<string, Handler | undefined> = {
   generate: runGenerateJob,
+  grade: runGradeJob,
 };
 
 const MAX_ATTEMPTS = 3;
@@ -29,11 +31,17 @@ export type TickResult = { ran: boolean; jobId?: string; outcome?: "done" | "req
 // Pace, enabled and cooldown are left alone, because the admin edits those.
 export async function ensureSlots(db: Db) {
   const specs = slotSpecs(process.env);
-  const { data: existing } = await db.from("api_slot").select("id, key_name, tier, enabled, last_error");
+  const { data: existing } = await db.from("api_slot").select("id, key_name, tier, model, priority, enabled, last_error");
 
-  if (specs.length) {
+  // Ticks run on every poll, so write only when a slot is new or its model or order changed.
+  const have = new Map((existing ?? []).map((r) => [`${r.key_name}:${r.tier}`, r]));
+  const changed = specs.filter((s) => {
+    const row = have.get(`${s.key_name}:${s.tier}`);
+    return !row || row.model !== s.model || row.priority !== s.priority;
+  });
+  if (changed.length) {
     await db.from("api_slot").upsert(
-      specs.map((s) => ({ key_name: s.key_name, tier: s.tier, model: s.model, priority: s.priority })),
+      changed.map((s) => ({ key_name: s.key_name, tier: s.tier, model: s.model, priority: s.priority })),
       { onConflict: "key_name,tier" },
     );
   }
@@ -86,6 +94,14 @@ export async function runTick(db: Db = createAdminClient()): Promise<TickResult>
         continue; // the job did not fail, the slot is resting: try the next slot
       }
 
+      // A hung call counts against the job, but the slot rests so the retry is not sent to the same place.
+      if (verdict.kind === "timeout") {
+        await db
+          .from("api_slot")
+          .update({ cooldown_until: inSeconds(verdict.cooldownSec), last_error: `Timed out: ${note}`, last_error_at: new Date().toISOString() })
+          .eq("id", slot.id);
+      }
+
       const attempts = job.attempts + 1;
       const failed = verdict.kind === "fatal" || attempts >= MAX_ATTEMPTS;
       await db
@@ -98,7 +114,7 @@ export async function runTick(db: Db = createAdminClient()): Promise<TickResult>
           finished_at: failed ? new Date().toISOString() : null,
         })
         .eq("id", job.id);
-      if (verdict.kind !== "fatal") {
+      if (verdict.kind !== "fatal" && verdict.kind !== "timeout") {
         await db.from("api_slot").update({ last_error: note, last_error_at: new Date().toISOString() }).eq("id", slot.id);
       }
       return { ran: true, jobId: job.id, outcome: failed ? "failed" : "requeued" };

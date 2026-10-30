@@ -37,6 +37,12 @@ export function practiceError(error: PostgrestError) {
     return NextResponse.json({ error: "No questions to practice with the chapters you picked. Try another set or more chapters." }, { status: 409 });
   }
   if (m.includes("already_answered")) return NextResponse.json({ error: "You already answered this question." }, { status: 409 });
+  if (m.includes("session_finished")) return NextResponse.json({ error: "This session is finished." }, { status: 409 });
+  if (m.includes("answer_too_short")) return NextResponse.json({ error: "Write a little more before you submit." }, { status: 400 });
+  if (m.includes("answer_too_long")) return NextResponse.json({ error: "That answer is too long. Keep it under 8000 characters." }, { status: 400 });
+  if (m.includes("daily_cap_reached")) {
+    return NextResponse.json({ error: "You have used all your AI gradings for today. They reset at midnight, Bangladesh time." }, { status: 429 });
+  }
   if (m.includes("unknown_option")) return NextResponse.json({ error: "That option does not belong to this question." }, { status: 400 });
   return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
 }

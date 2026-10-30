@@ -151,3 +151,11 @@ test("prompt carries the chapter text with page markers, figures and existing qu
   assert.match(user, /- Figure 2.1 \(page 4\)/);
   assert.match(user, /- Old question\?/);
 });
+
+test("a hung call that our timeout aborted rests the slot and counts as an attempt", () => {
+  const abort = Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+  assert.deepEqual(classifyError(abort), { kind: "timeout", cooldownSec: 60 });
+  assert.equal(classifyError(new Error("request timed out")).kind, "timeout");
+  assert.equal(classifyError(Object.assign(new Error("boom"), { status: 500 })).kind, "transient");
+  assert.equal(classifyError(Object.assign(new Error("slow"), { status: 429 })).kind, "rate_limit");
+});

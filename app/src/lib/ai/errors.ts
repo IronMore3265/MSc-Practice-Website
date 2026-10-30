@@ -18,12 +18,14 @@ export class JobFatalError extends Error {
 export type ErrorClass =
   | { kind: "rate_limit"; retryAfterSec: number } // rest this slot (limit hit or model overloaded), try the next one, the job keeps its attempts
   | { kind: "slot_problem"; cooldownSec: number; reason: string } // bad key or model name: rest the slot for a long time
+  | { kind: "timeout"; cooldownSec: number } // the call hung: rest this slot so the retry goes to another one, counts as an attempt
   | { kind: "transient" } // network or server trouble: the job tries again, counts as an attempt
   | { kind: "job_error" } // the model's answer or our request was unusable: counts as an attempt
   | { kind: "fatal"; message: string }; // fail the job now
 
 export const DEFAULT_RATE_LIMIT_SEC = 60;
 export const OVERLOADED_SEC = 30;
+export const TIMEOUT_REST_SEC = 60;
 
 export function statusOf(err: unknown): number | null {
   if (typeof err !== "object" || err === null) return null;
@@ -46,6 +48,12 @@ export function classifyError(err: unknown): ErrorClass {
   const m = (err as { message?: unknown } | null)?.message;
   const message = typeof m === "string" ? m : String(err);
   const status = statusOf(err);
+
+  // An overloaded model sometimes hangs instead of answering 503. Our own timeout aborts the call.
+  const name = (err as { name?: unknown } | null)?.name;
+  if (name === "AbortError" || name === "TimeoutError" || (status === null && /aborted|timed? ?out/i.test(message))) {
+    return { kind: "timeout", cooldownSec: TIMEOUT_REST_SEC };
+  }
 
   if (status === 429) {
     const wait = parseRetryDelay(message) ?? DEFAULT_RATE_LIMIT_SEC;

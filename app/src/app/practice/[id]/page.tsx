@@ -1,19 +1,34 @@
 import { notFound } from "next/navigation";
+import { CqPlayer } from "@/components/CqPlayer";
+import { CqResult } from "@/components/CqResult";
 import { McqPlayer } from "@/components/McqPlayer";
 import { SessionResult } from "@/components/SessionResult";
 import { requireActive } from "@/lib/auth";
+import type { CqSessionPayload } from "@/lib/cq";
 import { UUID_RE, type SessionPayload } from "@/lib/practice";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Practice | Exam Practice Studio" };
+export const dynamic = "force-dynamic";
 
 // One page for a session: the player while it is open, the result once it is finished.
-// get_session loads the questions without the answer key and closes the session if the countdown ran out.
+// MCQ: get_session loads the questions without the answer key and closes the session if the countdown ran out.
+// CQ: get_cq_session loads the answers and any feedback. Neither one hands out the key points.
 export default async function PracticePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
   const { profile } = await requireActive();
   const supabase = await createClient();
+
+  const { data: run } = await supabase.from("session_run").select("sections").eq("id", id).maybeSingle();
+  if (!run) notFound();
+
+  if (run.sections.includes("cq")) {
+    const { data, error } = await supabase.rpc("get_cq_session", { p_session: id });
+    if (error || !data) notFound();
+    const cq = data as unknown as CqSessionPayload;
+    return cq.session.finished ? <CqResult payload={cq} /> : <CqPlayer initial={cq} />;
+  }
 
   const { data, error } = await supabase.rpc("get_session", { p_session: id });
   if (error || !data) notFound();
@@ -31,6 +46,7 @@ export default async function PracticePage({ params }: { params: Promise<{ id: s
       .eq("user_id", profile.id)
       .eq("set_id", payload.session.set_id)
       .is("retry_of", null)
+      .contains("sections", ["mcq"])
       .not("finished_at", "is", null)
       .lt("finished_at", payload.session.finished_at)
       .order("finished_at", { ascending: false })

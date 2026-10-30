@@ -7,7 +7,9 @@ export type SetView = {
   id: string;
   name: string;
   mcqByChapter: Record<string, number>;
+  cqByChapter: Record<string, number>;
   attempts: number;
+  cqAttempts: number;
   lastPercent: number | null;
 };
 export type ExamView = {
@@ -20,23 +22,27 @@ export type ExamView = {
   sets: SetView[];
 };
 export type CourseView = { id: string; name: string; short: string | null; exams: ExamView[] };
+export type GradeCap = { used: number; limit: number };
+type Section = "mcq" | "cq";
 
 function chapterLabel(exam: ExamView) {
   return exam.chapters.length ? `Ch ${exam.chapters.map((c) => c.number).join(", ")}` : "No chapters yet";
 }
 
-function timerLabel(exam: ExamView) {
+function timerLabel(exam: ExamView, section: Section) {
+  if (section === "cq") return "Stopwatch for each CQ";
   return exam.mcqSeconds > 0 ? `${Math.round(exam.mcqSeconds / 60)} min MCQ timer` : "No MCQ timer";
 }
 
 // Home screen (mockup screen 01): course, exam, section, chapters, set, then Start.
-// MCQ practice is the only section that can be started in this phase. CQ practice arrives later.
-export function StartPractice({ courses }: { courses: CourseView[] }) {
+// MCQ and CQ run as separate sessions. "MCQ + CQ" in one go is not built yet, so it stays switched off.
+export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: GradeCap }) {
   const router = useRouter();
   const [courseId, setCourseId] = useState(courses[0]?.id);
   const [examIds, setExamIds] = useState<Record<string, string>>({});
   const [chapterPick, setChapterPick] = useState<Record<string, string[]>>({});
   const [setPick, setSetPick] = useState<Record<string, string>>({});
+  const [sectionPick, setSectionPick] = useState<Record<string, Section>>({});
   const [busy, setBusy] = useState<"start" | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, startRefresh] = useTransition();
@@ -50,8 +56,12 @@ export function StartPractice({ courses }: { courses: CourseView[] }) {
   const allPicked = picked.length === allIds.length;
   // Default set: the first one you have not tried yet, else Set 1.
   const set = exam ? (exam.sets.find((s) => s.id === setPick[exam.id]) ?? exam.sets.find((s) => s.attempts === 0) ?? exam.sets[0]) : undefined;
-  const mcqCount = set ? picked.reduce((sum, id) => sum + (set.mcqByChapter[id] ?? 0), 0) : 0;
-  const playable = !!exam && exam.format !== "cq";
+  // An MCQ-only or CQ-only exam has one section. An exam with both lets you pick, MCQ first.
+  const section: Section = exam ? (exam.format === "cq" ? "cq" : exam.format === "mcq" ? "mcq" : (sectionPick[exam.id] ?? "mcq")) : "mcq";
+  const counts = set ? (section === "cq" ? set.cqByChapter : set.mcqByChapter) : {};
+  const questionCount = picked.reduce((sum, id) => sum + (counts[id] ?? 0), 0);
+  const noun = section === "cq" ? "CQ" : "MCQ";
+  const capLeft = Math.max(0, cap.limit - cap.used);
 
   function toggleChapter(id: string) {
     if (!exam) return;
@@ -88,7 +98,7 @@ export function StartPractice({ courses }: { courses: CourseView[] }) {
       const res = await fetch("/api/sessions", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ set_id: set.id, chapter_ids: allPicked ? undefined : picked }),
+        body: JSON.stringify({ set_id: set.id, section, chapter_ids: allPicked ? undefined : picked }),
       });
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !data.id) {
@@ -159,27 +169,21 @@ export function StartPractice({ courses }: { courses: CourseView[] }) {
             <span className="label-orange">3</span> Section · {exam.name} has both
           </p>
           <div className="wrap">
-            <button type="button" className="pill" disabled title="CQ practice is not available yet">
+            <button type="button" className="pill" disabled title="Not available yet. Do the MCQ part, then the CQ part.">
               MCQ + CQ
             </button>
-            <button type="button" className="pill pill-active" aria-pressed="true">
+            <button type="button" className={`pill${section === "mcq" ? " pill-active" : ""}`} aria-pressed={section === "mcq"} onClick={() => setSectionPick({ ...sectionPick, [exam.id]: "mcq" })}>
               MCQ only
             </button>
-            <button type="button" className="pill" disabled title="CQ practice is not available yet">
+            <button type="button" className={`pill${section === "cq" ? " pill-active" : ""}`} aria-pressed={section === "cq"} onClick={() => setSectionPick({ ...sectionPick, [exam.id]: "cq" })}>
               CQ only
             </button>
           </div>
-          <p className="small muted">CQ practice is not available yet. MCQ practice works now.</p>
+          <p className="small muted">Do the MCQ part and the CQ part one after the other. Doing both in one session is not available yet.</p>
         </div>
       ) : null}
 
-      {exam && !playable ? (
-        <div className="dashed">
-          <p className="small">{exam.name} is descriptive only, and CQ practice is not available yet. Pick an exam with MCQs to practice now.</p>
-        </div>
-      ) : null}
-
-      {exam && playable ? (
+      {exam ? (
         <>
           <div className="stack-sm">
             <p className="label">
@@ -231,9 +235,10 @@ export function StartPractice({ courses }: { courses: CourseView[] }) {
             {exam.sets.length === 0 ? <p className="small muted">This exam has no sets yet. Make a random one to start.</p> : null}
             {set ? (
               <p className="small muted">
-                {mcqCount} MCQ{mcqCount === 1 ? "" : "s"} in {set.name}
+                {questionCount} {noun}{questionCount === 1 ? "" : "s"} in {set.name}
                 {allPicked ? "" : " for the chapters you picked"}.
-                {set.lastPercent !== null ? ` Last score ${set.lastPercent}%.` : ""}
+                {section === "mcq" && set.lastPercent !== null ? ` Last score ${set.lastPercent}%.` : ""}
+                {section === "cq" && set.cqAttempts > 0 ? ` Tried ${set.cqAttempts} time${set.cqAttempts === 1 ? "" : "s"}.` : ""}
               </p>
             ) : null}
           </div>
@@ -241,12 +246,17 @@ export function StartPractice({ courses }: { courses: CourseView[] }) {
           {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
 
           <div className="between">
-            <p className="label">{timerLabel(exam)}</p>
-            <button type="button" className="btn btn-primary" disabled={!set || mcqCount === 0 || busy !== null} onClick={() => void start()}>
+            <p className="label">{timerLabel(exam, section)}</p>
+            <button type="button" className="btn btn-primary" disabled={!set || questionCount === 0 || busy !== null} onClick={() => void start()}>
               {busy === "start" ? "Starting..." : "Start practice"}
             </button>
           </div>
-          {set && mcqCount === 0 ? <p className="small muted">There are no MCQs in this set for the chapters picked. Pick more chapters, another set, or make a new random set.</p> : null}
+          {section === "cq" ? (
+            <p className="small muted">
+              Each CQ is marked by AI and uses one of your daily gradings. {capLeft} of {cap.limit} left today.
+            </p>
+          ) : null}
+          {set && questionCount === 0 ? <p className="small muted">There are no {noun}s in this set for the chapters picked. Pick more chapters, another set, or make a new random set.</p> : null}
         </>
       ) : null}
     </section>
