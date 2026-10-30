@@ -720,7 +720,13 @@ export type Database = {
       };
       attempt: {
         Row: {
+          answer_source: string;
           answer_text: string | null;
+          photo_paths: string[];
+          photos_added_at: string | null;
+          transcribe_job_id: string | null;
+          transcription: string | null;
+          transcription_unsure: Json | null;
           answered_at: string | null;
           feedback: Json | null;
           graded_at: string | null;
@@ -736,7 +742,13 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          answer_source?: string;
           answer_text?: string | null;
+          photo_paths?: string[];
+          photos_added_at?: string | null;
+          transcribe_job_id?: string | null;
+          transcription?: string | null;
+          transcription_unsure?: Json | null;
           answered_at?: string | null;
           feedback?: Json | null;
           graded_at?: string | null;
@@ -752,7 +764,13 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          answer_source?: string;
           answer_text?: string | null;
+          photo_paths?: string[];
+          photos_added_at?: string | null;
+          transcribe_job_id?: string | null;
+          transcription?: string | null;
+          transcription_unsure?: Json | null;
           answered_at?: string | null;
           feedback?: Json | null;
           graded_at?: string | null;
@@ -868,6 +886,11 @@ export type Database = {
       start_cq_session: { Args: { p_set_id: string; p_chapter_ids?: string[] }; Returns: string };
       get_cq_session: { Args: { p_session: string }; Returns: Json };
       submit_cq_answer: { Args: { p_session: string; p_question: string; p_answer: string; p_seconds?: number }; Returns: Json };
+      add_cq_photo: { Args: { p_session: string; p_question: string; p_path: string }; Returns: Json };
+      remove_cq_photo: { Args: { p_session: string; p_question: string; p_file: string }; Returns: string };
+      reset_cq_photos: { Args: { p_session: string; p_question: string }; Returns: string[] };
+      start_cq_transcription: { Args: { p_session: string; p_question: string }; Returns: Json };
+      record_cq_transcription: { Args: { p_attempt: string; p_job: string; p_text: string; p_unsure: Json }; Returns: boolean };
       record_cq_grade: { Args: { p_attempt: string; p_score: number; p_feedback: Json }; Returns: undefined };
     };
     Enums: {

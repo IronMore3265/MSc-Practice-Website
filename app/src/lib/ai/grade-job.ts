@@ -4,6 +4,7 @@ import type { Database, Json } from "@/lib/database.types";
 import { JobFatalError } from "./errors";
 import { generateJson, type InlineImage } from "./gemini";
 import { GRADE_SCHEMA, buildGradePrompt, validateGrade } from "./grading";
+import { purgeAttemptPhotos } from "./photos";
 
 type Db = SupabaseClient<Database>;
 
@@ -83,6 +84,10 @@ export async function runGradeJob(args: { db: Db; job: { id: string; user_id: st
 
   const { error } = await db.rpc("record_cq_grade", { p_attempt: attempt.id, p_score: feedback.score, p_feedback: feedback as unknown as Json });
   if (error) throw new Error(`Could not save the grade: ${error.message}`);
+
+  // The answer is marked, so the photos have done their job and only the text stays. A failure here must not fail
+  // the job (the grade is saved), the daily cleanup deletes whatever is left.
+  await purgeAttemptPhotos(db, attempt.id).catch(() => undefined);
 
   return { attempt_id: attempt.id, score: feedback.score, out_of: feedback.out_of, model: args.model } as unknown as Json;
 }

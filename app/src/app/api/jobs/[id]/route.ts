@@ -51,8 +51,15 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
     if (attempt?.graded_at) graded = { score: attempt.score, feedback: attempt.feedback };
   }
 
+  // A finished reading carries the text for the correction step and the parts it was unsure about.
+  let read: { transcription: string; unsure: unknown } | null = null;
+  if (job.kind === "transcribe" && job.status === "done" && typeof attemptId === "string") {
+    const { data: attempt } = await supabase.from("attempt").select("transcription, transcription_unsure, transcribe_job_id").eq("id", attemptId).maybeSingle();
+    if (attempt?.transcription && attempt.transcribe_job_id === job.id) read = { transcription: attempt.transcription, unsure: attempt.transcription_unsure ?? [] };
+  }
+
   const { payload: _payload, priority: _priority, ...visible } = job;
   void _payload;
   void _priority;
-  return NextResponse.json({ job: visible, position, ...(graded ?? {}) });
+  return NextResponse.json({ job: visible, position, ...(graded ?? {}), ...(read ?? {}) });
 }

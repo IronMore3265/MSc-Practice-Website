@@ -43,6 +43,15 @@ export function practiceError(error: PostgrestError) {
   if (m.includes("daily_cap_reached")) {
     return NextResponse.json({ error: "You have used all your AI gradings for today. They reset at midnight, Bangladesh time." }, { status: 429 });
   }
+  if (m.includes("too_many_photos")) return NextResponse.json({ error: "You can attach up to 4 photos to one answer." }, { status: 409 });
+  if (m.includes("photos_locked")) return NextResponse.json({ error: "These photos are already being read. Start over to change them." }, { status: 409 });
+  if (m.includes("no_photos")) return NextResponse.json({ error: "Add at least one photo first." }, { status: 400 });
+  if (m.includes("too_many_readings")) {
+    return NextResponse.json({ error: "Your photos were read three times already. Type the answer, or start a new question." }, { status: 429 });
+  }
+  if (m.includes("still_reading")) return NextResponse.json({ error: "Your photos are still being read. Wait a moment." }, { status: 409 });
+  if (m.includes("unknown_photo")) return NextResponse.json({ error: "That photo is not on this answer." }, { status: 404 });
+  if (m.includes("bad_photo_path") || m.includes("photo_missing")) return NextResponse.json({ error: "The photo did not upload. Try again." }, { status: 400 });
   if (m.includes("unknown_option")) return NextResponse.json({ error: "That option does not belong to this question." }, { status: 400 });
   return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
 }

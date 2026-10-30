@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, after } from "next/server";
+import { purgeStalePhotos } from "@/lib/ai/photos";
 import { runTick } from "@/lib/ai/router";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -23,6 +24,8 @@ export async function GET(request: Request) {
   if (error) return NextResponse.json({ ok: false }, { status: 500 });
   // Catch jobs nobody was polling for (plan 5b: the optional daily cron).
   after(async () => {
+    // Photos nobody used for two days, or that the grade job could not delete. A failure here must not stop the queue.
+    await purgeStalePhotos(createAdminClient()).catch((err) => console.error("Photo cleanup failed:", err));
     await runTick();
   });
   return NextResponse.json({ ok: true });

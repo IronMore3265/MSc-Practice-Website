@@ -5,6 +5,7 @@ import type { Database, Json } from "@/lib/database.types";
 import { JobFatalError, classifyError } from "./errors";
 import { runGenerateJob } from "./generate-job";
 import { runGradeJob } from "./grade-job";
+import { runTranscribeJob } from "./transcribe-job";
 import { apiKeyFor, slotSpecs } from "./slots";
 
 // The request router and queue (plan 5b). A "tick" claims one waiting job on a ready slot and runs it.
@@ -20,6 +21,7 @@ type Handler = (a: { db: Db; job: Claim["job"]; apiKey: string; model: string })
 const HANDLERS: Record<string, Handler | undefined> = {
   generate: runGenerateJob,
   grade: runGradeJob,
+  transcribe: runTranscribeJob,
 };
 
 const MAX_ATTEMPTS = 3;

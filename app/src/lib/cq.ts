@@ -18,6 +18,9 @@ export type GradeFeedback = {
   improved_answer: string;
 };
 
+// A part of a transcription the reader was unsure about (plan 7b). The text is copied from the transcription.
+export type UnsurePart = { text: string; reason: string | null };
+
 export type CqQuestion = {
   id: string;
   attempt_id: string;
@@ -29,6 +32,12 @@ export type CqQuestion = {
   figure: SessionFigure | null;
   answered: boolean;
   answer_text: string | null;
+  answer_source: "typed" | "photo";
+  photos: string[]; // file names of the answer photos, shown through /api/attempts/{attempt}/photos/{file}
+  transcribe_job_id: string | null;
+  transcribe_status: JobStatus | null;
+  transcription: string | null;
+  unsure: UnsurePart[];
   seconds_spent: number | null;
   job_id: string | null;
   job_status: JobStatus | null;
@@ -64,10 +73,15 @@ export type JobPoll = {
   position: number | null;
   score?: number | null;
   feedback?: GradeFeedback | null;
+  transcription?: string | null; // a finished reading job carries the text and what it was unsure about
+  unsure?: UnsurePart[];
 };
 
 // Typed answers skip the "handwriting read" step, so four steps are shown (plan 5c).
 export const GRADE_STEPS = ["Answer received", "Matching with your notes", "Checking grammar", "Scoring and feedback"] as const;
+
+// Steps shown while the handwriting is read. The marking steps above follow once the student confirms the text.
+export const READ_STEPS = ["Photos received", "Reading your handwriting", "Checking the text"] as const;
 
 export type ProgressView = {
   percent: number; // 0 to 100
@@ -80,8 +94,8 @@ const EASE_SECONDS = 14; // the bar eases toward 88 percent over roughly this sc
 const CEILING = 88;
 
 // The bar is an estimate. Queue position and the start of the job are real, the middle steps are timed.
-export function gradingProgress(a: { status: JobStatus; position: number | null; runningMs: number }): ProgressView {
-  const last = GRADE_STEPS.length;
+export function gradingProgress(a: { status: JobStatus; position: number | null; runningMs: number; steps?: number }): ProgressView {
+  const last = a.steps ?? GRADE_STEPS.length;
   if (a.status === "done") return { percent: 100, doneSteps: last, activeStep: last, note: null };
   if (a.status === "queued") {
     return { percent: 3, doneSteps: 0, activeStep: 0, note: a.position ? `Position in queue #${a.position}` : "Waiting for a free slot" };
@@ -89,7 +103,7 @@ export function gradingProgress(a: { status: JobStatus; position: number | null;
   if (a.status === "failed") return { percent: 0, doneSteps: 0, activeStep: 0, note: null };
   const seconds = Math.max(0, a.runningMs) / 1000;
   const percent = Math.max(8, Math.round(CEILING * (1 - Math.exp(-seconds / EASE_SECONDS))));
-  const doneSteps = 1 + (percent >= 30 ? 1 : 0) + (percent >= 62 ? 1 : 0);
+  const doneSteps = Math.min(1 + (percent >= 30 ? 1 : 0) + (percent >= 62 ? 1 : 0), last - 1);
   return { percent, doneSteps, activeStep: Math.min(doneSteps, last - 1), note: null };
 }
 

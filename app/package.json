@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/lib/ai/ai.test.ts src/lib/ai/grading.test.ts src/lib/practice.test.ts src/lib/cq.test.ts"
+    "test": "node --test src/lib/ai/ai.test.ts src/lib/ai/grading.test.ts src/lib/practice.test.ts src/lib/cq.test.ts src/lib/ai/transcription.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
