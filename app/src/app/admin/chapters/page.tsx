@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = Promise<{ course?: string }>;

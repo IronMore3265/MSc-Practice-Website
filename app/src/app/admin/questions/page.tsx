@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { ActionForm } from "@/components/ActionForm";
 import { JobWatcher } from "@/components/JobWatcher";
 import { MAX_GENERATE_COUNT } from "@/lib/ai/generation";

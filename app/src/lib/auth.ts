@@ -37,16 +37,27 @@ async function ensureAdminProfile(user: User, existing: Profile | null): Promise
   return data;
 }
 
-// The signed-in user and their profile, or null when signed out. One lookup per request.
-export const getSession = cache(async (): Promise<{ user: User; profile: Profile | null } | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+export type SessionUser = { id: string; email: string | undefined };
 
+// The signed-in user and their profile, or null when signed out. One lookup per request.
+// getClaims checks the session token's signature locally (the project uses asymmetric signing keys), so a page
+// load does not wait on the Auth server. Blocking a member still works at once: their profile status is read here.
+export const getSession = cache(async (): Promise<{ user: SessionUser; profile: Profile | null } | null> => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+
+  const user: SessionUser = { id: claims.sub, email: claims.email };
   const { data: profile } = await supabase.from("profile").select("*").eq("id", user.id).maybeSingle();
-  return { user, profile: await ensureAdminProfile(user, profile) };
+  // Only the admin's first sign-in needs the full user record (it checks the email is confirmed).
+  if (isAdminEmail(user.email) && !(profile?.role === "admin" && profile.status === "active")) {
+    const {
+      data: { user: full },
+    } = await supabase.auth.getUser();
+    if (full) return { user, profile: await ensureAdminProfile(full, profile) };
+  }
+  return { user, profile };
 });
 
 // Any signed-in, approved member.

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { InvitePanel } from "@/components/InvitePanel";
 import { StartPractice, type CourseView } from "@/components/StartPractice";
 import { requireActive } from "@/lib/auth";

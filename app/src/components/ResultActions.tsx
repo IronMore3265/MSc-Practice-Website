@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { useRouter } from "next/navigation";
 
 type Props = { setId: string | null; sessionId: string; chapterIds: string[]; missed: number };

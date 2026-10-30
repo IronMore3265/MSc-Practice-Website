@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { FigureCard } from "@/components/FigureCard";
 import { ResultActions } from "@/components/ResultActions";
 import { formatDuration, percent, type SessionPayload } from "@/lib/practice";

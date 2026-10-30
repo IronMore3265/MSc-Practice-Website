@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { usePathname } from "next/navigation";
 
 // Usage counts and data export arrive with Phase 8.

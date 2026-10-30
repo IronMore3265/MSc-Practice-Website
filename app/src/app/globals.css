@@ -1140,3 +1140,39 @@ math-field::part(menu-toggle) {
     overflow-x: visible;
   }
 }
+
+/* Navigation feedback: a clicked link dims until its page arrives, and loading.tsx shows a placeholder */
+.nav-pending {
+  display: none;
+}
+
+a:has(> .nav-pending) {
+  opacity: 0.55;
+  cursor: progress;
+  transition: opacity 0.1s 0.05s;
+}
+
+body:has(.nav-pending) {
+  cursor: progress;
+}
+
+.skeleton {
+  height: 120px;
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+.skeleton-short {
+  height: 64px;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { ActionForm } from "@/components/ActionForm";
 import { createClient } from "@/lib/supabase/server";
 import { createAutoSet, createEmptySet } from "./actions";

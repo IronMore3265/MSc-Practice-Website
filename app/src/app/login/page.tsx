@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { getSession } from "@/lib/auth";

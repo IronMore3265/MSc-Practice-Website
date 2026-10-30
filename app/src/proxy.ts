@@ -24,9 +24,10 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Verifies the token locally (asymmetric signing keys) and refreshes it when it has expired.
+  // getUser would ask the Auth server on every request, prefetches included.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub;
 
   const { pathname } = request.nextUrl;
   const isPublic = PUBLIC_PATHS.includes(pathname);

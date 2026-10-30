@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { QuestionEditor } from "@/components/QuestionEditor";
 import { createClient } from "@/lib/supabase/server";
 import { saveQuestion } from "../actions";

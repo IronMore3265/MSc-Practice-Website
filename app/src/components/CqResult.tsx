@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/NavLink";
 import { FeedbackCards } from "@/components/FeedbackCards";
 import { FigureCard } from "@/components/FigureCard";
 import { JobWatcher } from "@/components/JobWatcher";
