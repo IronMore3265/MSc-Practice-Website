@@ -1,4 +1,5 @@
 import Link from "@/components/NavLink";
+import { adminCourses } from "@/lib/courses";
 import { createClient } from "@/lib/supabase/server";
 
 type SearchParams = Promise<{ course?: string }>;
@@ -7,7 +8,7 @@ export default async function AdminChaptersPage({ searchParams }: { searchParams
   const { course: courseParam } = await searchParams;
   const supabase = await createClient();
 
-  const { data: courses } = await supabase.from("course").select("*").order("sort_order");
+  const courses = await adminCourses(supabase);
   const course = (courses ?? []).find((c) => c.id === courseParam) ?? courses?.[0];
   if (!course) return <p className="small muted">No courses yet. Add one on the Exams tab.</p>;
 

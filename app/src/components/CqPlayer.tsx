@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FeedbackCards } from "@/components/FeedbackCards";
 import { FigureCard } from "@/components/FigureCard";
 import { GradingProgress } from "@/components/GradingProgress";
+import { ChevronLeft, ChevronRight } from "@/components/Icons";
 import { MathAnswerEditor } from "@/components/MathAnswerEditor";
 import { PhotoAnswer } from "@/components/PhotoAnswer";
 import { SnakeGame } from "@/components/SnakeGame";
@@ -493,25 +494,30 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
 
       {error && !open ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
 
-      {!open ? (
-        <div className="between">
-          <p className="small muted">
-            {answeredCount} of {questions.length} answered
-          </p>
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>
-            {isLast ? "Finish session" : "Next question"}
+      <div className="between">
+        <p className="small muted">
+          {answeredCount} of {questions.length} answered
+        </p>
+        <div className="nav-buttons">
+          {open ? (
+            <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>
+              End session
+            </button>
+          ) : null}
+          <button type="button" className="btn btn-icon" aria-label="Previous question" title="Previous question" disabled={busy || index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
+            <ChevronLeft />
           </button>
+          {!isLast ? (
+            <button type="button" className={`btn btn-icon${open ? "" : " btn-primary"}`} aria-label="Next question" title="Next question" disabled={busy} onClick={next}>
+              <ChevronRight />
+            </button>
+          ) : !open ? (
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>
+              Finish session
+            </button>
+          ) : null}
         </div>
-      ) : (
-        <div className="between">
-          <p className="small muted">
-            {answeredCount} of {questions.length} answered
-          </p>
-          <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>
-            End session
-          </button>
-        </div>
-      )}
+      </div>
 
       <p className="label footer">Exam Practice Studio</p>
     </main>

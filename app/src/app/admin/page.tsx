@@ -1,28 +1,89 @@
 import Link from "@/components/NavLink";
 import { ActionForm } from "@/components/ActionForm";
 import { createClient } from "@/lib/supabase/server";
-import { addChapter, addCourse, addExam, deleteChapter, deleteExam, updateExam } from "./actions";
+import { addChapter, addCourse, addExam, addSemester, deleteChapter, deleteExam, setSemesterOpen, updateExam } from "./actions";
 
-type SearchParams = Promise<{ course?: string; exam?: string }>;
+type SearchParams = Promise<{ semester?: string; course?: string; exam?: string }>;
 
 const FORMAT_LABEL = { mcq: ["MCQ"], cq: ["CQ"], both: ["MCQ", "CQ"] } as const;
 
+function AddSemesterForm({ id }: { id: string }) {
+  return (
+    <ActionForm action={addSemester} submitLabel="Add semester" className="inline-form">
+      <div className="field">
+        <label className="label" htmlFor={id}>Semester name</label>
+        <input id={id} name="name" className="input input-sm" placeholder="For example: Semester 2" required />
+      </div>
+    </ActionForm>
+  );
+}
+
 export default async function AdminExamsPage({ searchParams }: { searchParams: SearchParams }) {
-  const { course: courseParam, exam: examParam } = await searchParams;
+  const { semester: semesterParam, course: courseParam, exam: examParam } = await searchParams;
   const supabase = await createClient();
 
-  const { data: courses } = await supabase.from("course").select("*").order("sort_order");
-  const course = (courses ?? []).find((c) => c.id === courseParam) ?? courses?.[0];
+  const [{ data: semesters }, { data: allCourses }] = await Promise.all([
+    supabase.from("semester").select("*").order("sort_order"),
+    supabase.from("course").select("*").order("sort_order"),
+  ]);
+  // A course link alone (from older bookmarks) still lands on its own semester. Otherwise the newest semester.
+  const fromCourse = (allCourses ?? []).find((c) => c.id === courseParam)?.semester_id;
+  const semester =
+    (semesters ?? []).find((s) => s.id === (semesterParam ?? fromCourse)) ?? semesters?.[semesters.length - 1];
 
-  if (!course) {
+  if (!semester) {
     return (
       <section className="stack">
         <div className="card-shadow stack">
-          <p className="label label-orange">No courses yet</p>
+          <p className="label label-orange">No semesters yet</p>
+          <AddSemesterForm id="first-semester" />
+        </div>
+      </section>
+    );
+  }
+
+  const courses = (allCourses ?? []).filter((c) => c.semester_id === semester.id);
+  const course = courses.find((c) => c.id === courseParam) ?? courses[0];
+
+  const semesterPicker = (
+    <div className="stack-sm">
+      <p className="label">Semester</p>
+      <div className="wrap">
+        {(semesters ?? []).map((s) => (
+          <Link key={s.id} href={`/admin?semester=${s.id}`} className="pill" aria-current={s.id === semester.id ? "page" : undefined}>
+            {s.name}
+            {s.is_open ? "" : " (hidden)"}
+          </Link>
+        ))}
+      </div>
+      <div className="wrap">
+        <ActionForm action={setSemesterOpen} submitLabel={semester.is_open ? `Hide ${semester.name} from students` : `Open ${semester.name} to students`} buttonClass="btn btn-small">
+          <input type="hidden" name="id" value={semester.id} />
+          <input type="hidden" name="open" value={semester.is_open ? "false" : "true"} />
+        </ActionForm>
+      </div>
+      <details>
+        <summary className="label" style={{ cursor: "pointer" }}>+ Add semester</summary>
+        <AddSemesterForm id="semester-name" />
+      </details>
+    </div>
+  );
+
+  if (!course) {
+    return (
+      <section className="stack" style={{ gap: 22 }}>
+        {semesterPicker}
+        <div className="card-shadow stack">
+          <p className="label label-orange">No courses in {semester.name} yet</p>
           <ActionForm action={addCourse} submitLabel="Add course" className="inline-form">
+            <input type="hidden" name="semester_id" value={semester.id} />
             <div className="field">
               <label className="label" htmlFor="new-course">Course name</label>
               <input id="new-course" name="name" className="input input-sm" required />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="new-course-short">Short name</label>
+              <input id="new-course-short" name="short_name" className="input input-sm" placeholder="Optional" />
             </div>
           </ActionForm>
         </div>
@@ -44,18 +105,21 @@ export default async function AdminExamsPage({ searchParams }: { searchParams: S
 
   return (
     <section className="stack" style={{ gap: 22 }}>
+      {semesterPicker}
+
       <div className="stack-sm">
-        <p className="label">Course</p>
+        <p className="label">Course · {semester.name}</p>
         <div className="wrap">
-          {(courses ?? []).map((c) => (
-            <Link key={c.id} href={`/admin?course=${c.id}`} className="pill" aria-current={c.id === course.id ? "page" : undefined}>
+          {courses.map((c) => (
+            <Link key={c.id} href={`/admin?semester=${semester.id}&course=${c.id}`} className="pill" aria-current={c.id === course.id ? "page" : undefined}>
               {c.short_name ?? c.name}
             </Link>
           ))}
         </div>
         <details>
-          <summary className="label" style={{ cursor: "pointer" }}>+ Add course</summary>
+          <summary className="label" style={{ cursor: "pointer" }}>+ Add course to {semester.name}</summary>
           <ActionForm action={addCourse} submitLabel="Add course" className="inline-form" >
+            <input type="hidden" name="semester_id" value={semester.id} />
             <div className="field">
               <label className="label" htmlFor="course-name">Full name</label>
               <input id="course-name" name="name" className="input input-sm" required />
@@ -78,7 +142,7 @@ export default async function AdminExamsPage({ searchParams }: { searchParams: S
               .filter((n): n is number => n !== undefined)
               .sort((a, b) => a - b);
             return (
-              <Link key={e.id} href={`/admin?course=${course.id}&exam=${e.id}`} className={`row row-link${e.id === selected?.id ? " exam-selected" : ""}`}>
+              <Link key={e.id} href={`/admin?semester=${semester.id}&course=${course.id}&exam=${e.id}`} className={`row row-link${e.id === selected?.id ? " exam-selected" : ""}`}>
                 <span className="row-name">{e.name}</span>
                 <span className="small">
                   {FORMAT_LABEL[e.format].join(" + ")}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ExamBriefing } from "@/components/ExamBriefing";
 import { setLabel, setsForPick } from "@/lib/practice";
 
 export type SetView = {
@@ -11,6 +12,8 @@ export type SetView = {
   chapterId: string | null;
   mcqByChapter: Record<string, number>;
   cqByChapter: Record<string, number>;
+  mcqMarksByChapter: Record<string, number>;
+  cqMarksByChapter: Record<string, number>;
   attempts: number;
   cqAttempts: number;
   lastPercent: number | null;
@@ -25,6 +28,7 @@ export type ExamView = {
   sets: SetView[];
 };
 export type CourseView = { id: string; name: string; short: string | null; exams: ExamView[] };
+export type SemesterView = { id: string; name: string; courses: CourseView[] };
 export type GradeCap = { used: number; limit: number };
 type Section = "mcq" | "cq";
 
@@ -37,22 +41,28 @@ function timerLabel(exam: ExamView, section: Section) {
   return exam.mcqSeconds > 0 ? `${Math.round(exam.mcqSeconds / 60)} min MCQ timer` : "No MCQ timer";
 }
 
-// Home screen (mockup screen 01): course, exam, section, chapters, set, then Start.
+// Home screen (mockup screen 01): semester, course, exam, section, chapters, set, then Start and a briefing.
 // MCQ and CQ run as separate sessions. "MCQ + CQ" in one go is not built yet, so it stays switched off.
-export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: GradeCap }) {
+export function StartPractice({ semesters, cap }: { semesters: SemesterView[]; cap: GradeCap }) {
   const router = useRouter();
-  const [courseId, setCourseId] = useState(courses[0]?.id);
+  // Newest semester first by default (the last one by sort order).
+  const [semesterId, setSemesterId] = useState(semesters[semesters.length - 1]?.id);
+  const [courseIds, setCourseIds] = useState<Record<string, string>>({});
   const [examIds, setExamIds] = useState<Record<string, string>>({});
   const [chapterPick, setChapterPick] = useState<Record<string, string[]>>({});
   const [setPick, setSetPick] = useState<Record<string, string>>({});
   const [sectionPick, setSectionPick] = useState<Record<string, Section>>({});
   const [busy, setBusy] = useState<"start" | "new" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The briefing belongs to one pick. Changing any picker above closes it.
+  const [briefFor, setBriefFor] = useState<string | null>(null);
   const [refreshing, startRefresh] = useTransition();
 
-  const course = courses.find((c) => c.id === courseId) ?? courses[0];
-  if (!course) return <p className="muted">No courses yet. The admin adds them.</p>;
-  const exam = course.exams.find((e) => e.id === examIds[course.id]) ?? course.exams[0];
+  const semester = semesters.find((s) => s.id === semesterId) ?? semesters[semesters.length - 1];
+  if (!semester) return <p className="muted">No semesters are open yet. The admin adds them.</p>;
+  const courses = semester.courses;
+  const course = courses.find((c) => c.id === courseIds[semester.id]) ?? courses[0];
+  const exam = course?.exams.find((e) => e.id === examIds[course.id]) ?? course?.exams[0];
 
   const allIds = exam ? exam.chapters.map((c) => c.id) : [];
   const picked = exam ? (chapterPick[exam.id] ?? allIds) : [];
@@ -64,8 +74,14 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
   const section: Section = exam ? (exam.format === "cq" ? "cq" : exam.format === "mcq" ? "mcq" : (sectionPick[exam.id] ?? "mcq")) : "mcq";
   const counts = set ? (section === "cq" ? set.cqByChapter : set.mcqByChapter) : {};
   const questionCount = picked.reduce((sum, id) => sum + (counts[id] ?? 0), 0);
+  const marksByChapter = set ? (section === "cq" ? set.cqMarksByChapter : set.mcqMarksByChapter) : {};
+  const marks = picked.reduce((sum, id) => sum + (marksByChapter[id] ?? 0), 0);
   const noun = section === "cq" ? "CQ" : "MCQ";
   const capLeft = Math.max(0, cap.limit - cap.used);
+  const pickKey = `${set?.id}|${section}|${picked.join(",")}`;
+  const briefing = briefFor === pickKey;
+  // Step numbers shift when the section step is shown.
+  const step = (n: number) => (exam?.format === "both" || n <= 3 ? n : n - 1);
 
   function toggleChapter(id: string) {
     if (!exam) return;
@@ -127,12 +143,18 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
     <section className="stack" style={{ gap: 22 }}>
       <div className="stack-sm">
         <p className="label">
-          <span className="label-orange">1</span> Course
+          <span className="label-orange">1</span> Semester
         </p>
         <div className="wrap">
-          {courses.map((c) => (
-            <button key={c.id} type="button" className={`pill${c.id === course.id ? " pill-active" : ""}`} aria-pressed={c.id === course.id} onClick={() => setCourseId(c.id)}>
-              {c.short ?? c.name}
+          {semesters.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`pill${s.id === semester.id ? " pill-active" : ""}`}
+              aria-pressed={s.id === semester.id}
+              onClick={() => setSemesterId(s.id)}
+            >
+              {s.name}
             </button>
           ))}
         </div>
@@ -140,43 +162,65 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
 
       <div className="stack-sm">
         <p className="label">
-          <span className="label-orange">2</span> Exam · {course.name}
+          <span className="label-orange">2</span> Course · {semester.name}
         </p>
-        {course.exams.length === 0 ? <p className="small muted">No exams in this course yet.</p> : null}
-        <div className="stack">
-          {course.exams.map((e) => {
-            const on = e.id === exam?.id;
-            return (
-              <button
-                key={e.id}
-                type="button"
-                className={`exam-card${on ? " exam-card-on" : ""}`}
-                aria-pressed={on}
-                onClick={() => setExamIds({ ...examIds, [course.id]: e.id })}
-              >
-                <span>
-                  <span className="row-name">{e.name}</span>
-                  <span className="small exam-card-sub">
-                    {chapterLabel(e)} · {e.weight}%
-                  </span>
-                </span>
-                <span className="wrap">
-                  {(e.format === "both" ? ["MCQ", "CQ"] : [e.format.toUpperCase()]).map((f) => (
-                    <span key={f} className="chip">
-                      {f}
-                    </span>
-                  ))}
-                </span>
-              </button>
-            );
-          })}
+        {courses.length === 0 ? <p className="small muted">No courses in this semester yet.</p> : null}
+        <div className="wrap">
+          {courses.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`pill${c.id === course?.id ? " pill-active" : ""}`}
+              aria-pressed={c.id === course?.id}
+              onClick={() => setCourseIds({ ...courseIds, [semester.id]: c.id })}
+            >
+              {c.short ?? c.name}
+            </button>
+          ))}
         </div>
       </div>
+
+      {course ? (
+        <div className="stack-sm">
+          <p className="label">
+            <span className="label-orange">3</span> Exam · {course.name}
+          </p>
+          {course.exams.length === 0 ? <p className="small muted">No exams in this course yet.</p> : null}
+          <div className="exam-grid">
+            {course.exams.map((e) => {
+              const on = e.id === exam?.id;
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  className={`exam-card${on ? " exam-card-on" : ""}`}
+                  aria-pressed={on}
+                  onClick={() => setExamIds({ ...examIds, [course.id]: e.id })}
+                >
+                  <span>
+                    <span className="row-name">{e.name}</span>
+                    <span className="small exam-card-sub">
+                      {chapterLabel(e)} · {e.weight}%
+                    </span>
+                  </span>
+                  <span className="wrap">
+                    {(e.format === "both" ? ["MCQ", "CQ"] : [e.format.toUpperCase()]).map((f) => (
+                      <span key={f} className="chip">
+                        {f}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {exam && exam.format === "both" ? (
         <div className="stack-sm">
           <p className="label">
-            <span className="label-orange">3</span> Section · {exam.name} has both
+            <span className="label-orange">4</span> Section · {exam.name} has both
           </p>
           <div className="wrap">
             <button type="button" className="pill" disabled title="Not available yet. Do the MCQ part, then the CQ part.">
@@ -197,7 +241,7 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
         <>
           <div className="stack-sm">
             <p className="label">
-              <span className="label-orange">{exam.format === "both" ? 4 : 3}</span> Chapters · from the {exam.name} syllabus
+              <span className="label-orange">{step(5)}</span> Chapters · from the {exam.name} syllabus
             </p>
             <div className="wrap">
               <button
@@ -222,7 +266,7 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
 
           <div className="stack-sm">
             <p className="label">
-              <span className="label-orange">{exam.format === "both" ? 5 : 4}</span> Set
+              <span className="label-orange">{step(6)}</span> Set
             </p>
             <div className="wrap">
               {sets.map((s) => (
@@ -255,12 +299,27 @@ export function StartPractice({ courses, cap }: { courses: CourseView[]; cap: Gr
 
           {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
 
-          <div className="between">
-            <p className="label">{timerLabel(exam, section)}</p>
-            <button type="button" className="btn btn-primary" disabled={!set || questionCount === 0 || busy !== null} onClick={() => void start()}>
-              {busy === "start" ? "Starting..." : "Start practice"}
-            </button>
-          </div>
+          {briefing ? (
+            <ExamBriefing
+              section={section}
+              title={`${exam.name} / ${noun}${set ? ` · ${setLabel(set, picked)}` : ""}`}
+              questionCount={questionCount}
+              marks={marks}
+              mcqSeconds={exam.mcqSeconds}
+              capLeft={capLeft}
+              capLimit={cap.limit}
+              busy={busy === "start"}
+              onBegin={() => void start()}
+              onBack={() => setBriefFor(null)}
+            />
+          ) : (
+            <div className="between">
+              <p className="label">{timerLabel(exam, section)}</p>
+              <button type="button" className="btn btn-primary" disabled={!set || questionCount === 0 || busy !== null} onClick={() => setBriefFor(pickKey)}>
+                Start practice
+              </button>
+            </div>
+          )}
           {section === "cq" ? (
             <p className="small muted">
               Each CQ is marked by AI and uses one of your daily gradings. {capLeft} of {cap.limit} left today.

@@ -32,17 +32,49 @@ function num(form: FormData, key: string, min: number, max: number): number | nu
 const done = (message: string): ActionState => ({ ok: true, message });
 const bad = (message: string): ActionState => ({ ok: false, message });
 
+export async function addSemester(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const name = text(form, "name", 60);
+  if (!name) return bad("Enter a semester name.");
+
+  const supabase = await createClient();
+  const { data: last } = await supabase.from("semester").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+  const { error } = await supabase.from("semester").insert({ name, sort_order: (last?.[0]?.sort_order ?? 0) + 1 });
+  if (error) return bad(error.code === "23505" ? "A semester with that name already exists." : "Could not add the semester.");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return done("Semester added.");
+}
+
+// Hide a finished semester from the student home screen, or open it again.
+export async function setSemesterOpen(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const id = text(form, "id", 64);
+  const open = form.get("open") === "true";
+  if (!id) return bad("Pick a semester.");
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("semester").update({ is_open: open }).eq("id", id);
+  if (error) return bad("Could not change the semester.");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return done(open ? "Students can see this semester." : "Hidden from students.");
+}
+
 export async function addCourse(_prev: ActionState, form: FormData): Promise<ActionState> {
   await requireAdmin();
   const name = text(form, "name");
   const shortName = text(form, "short_name", 40) || null;
+  const semesterId = text(form, "semester_id", 64);
   if (!name) return bad("Enter a course name.");
+  if (!semesterId) return bad("Add a semester first.");
 
   const supabase = await createClient();
-  const { count } = await supabase.from("course").select("id", { count: "exact", head: true });
-  const { error } = await supabase.from("course").insert({ name, short_name: shortName, sort_order: (count ?? 0) + 1 });
+  const { count } = await supabase.from("course").select("id", { count: "exact", head: true }).eq("semester_id", semesterId);
+  const { error } = await supabase.from("course").insert({ name, short_name: shortName, semester_id: semesterId, sort_order: (count ?? 0) + 1 });
   if (error) return bad(error.code === "23505" ? "A course with that name already exists." : "Could not add the course.");
   revalidatePath("/admin");
+  revalidatePath("/");
   return done("Course added.");
 }
 

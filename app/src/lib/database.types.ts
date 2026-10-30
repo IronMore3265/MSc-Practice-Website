@@ -28,9 +28,23 @@ export type Database = {
         ];
       };
       course: {
-        Row: { created_at: string; id: string; name: string; short_name: string | null; sort_order: number };
-        Insert: { created_at?: string; id?: string; name: string; short_name?: string | null; sort_order?: number };
-        Update: { created_at?: string; id?: string; name?: string; short_name?: string | null; sort_order?: number };
+        Row: { created_at: string; id: string; name: string; semester_id: string; short_name: string | null; sort_order: number };
+        Insert: { created_at?: string; id?: string; name: string; semester_id: string; short_name?: string | null; sort_order?: number };
+        Update: { created_at?: string; id?: string; name?: string; semester_id?: string; short_name?: string | null; sort_order?: number };
+        Relationships: [
+          {
+            foreignKeyName: "course_semester_id_fkey";
+            columns: ["semester_id"];
+            isOneToOne: false;
+            referencedRelation: "semester";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      semester: {
+        Row: { created_at: string; id: string; is_open: boolean; name: string; sort_order: number };
+        Insert: { created_at?: string; id?: string; is_open?: boolean; name: string; sort_order?: number };
+        Update: { created_at?: string; id?: string; is_open?: boolean; name?: string; sort_order?: number };
         Relationships: [];
       };
       exam: {
@@ -918,6 +932,7 @@ export type Database = {
 export type Profile = Database["public"]["Tables"]["profile"]["Row"];
 export type Invite = Database["public"]["Tables"]["invite"]["Row"];
 export type Course = Database["public"]["Tables"]["course"]["Row"];
+export type Semester = Database["public"]["Tables"]["semester"]["Row"];
 export type Chapter = Database["public"]["Tables"]["chapter"]["Row"];
 export type Exam = Database["public"]["Tables"]["exam"]["Row"];
 export type ExamSetSettings = Database["public"]["Tables"]["exam_set_settings"]["Row"];

@@ -51,7 +51,37 @@ p {
 }
 
 .shell-wide {
-  max-width: 820px;
+  max-width: 1180px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+@media (max-width: 520px) {
+  .shell-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Home on a laptop: picker on the left, side column on the right. One column on phones. */
+.dash-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+@media (min-width: 960px) {
+  .dash-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    gap: 40px;
+    align-items: start;
+  }
+
+  .dash-side {
+    position: sticky;
+    top: 24px;
+  }
 }
 
 .stack {
@@ -1174,5 +1204,162 @@ body:has(.nav-pending) {
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
+  }
+}
+
+/* Exam cards sit two or three wide on a laptop, one wide on a phone */
+.exam-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+/* Briefing before a session starts */
+.brief {
+  scroll-margin: 24px;
+}
+
+.brief-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.brief-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brief-keys {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px 12px;
+  align-items: center;
+}
+
+.opt.opt-key {
+  width: 48px;
+  padding: 6px 8px;
+  cursor: default;
+}
+
+.segment.segment-key {
+  display: block;
+  width: 48px;
+  cursor: default;
+}
+
+.brief-move {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Square icon buttons for previous and next */
+.btn-icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.btn-icon:disabled {
+  cursor: default;
+}
+
+.btn-key {
+  width: 32px;
+  height: 32px;
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: default;
+}
+
+.btn-key svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Result review: right or wrong chip next to each question */
+.chip-right {
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.chip-wrong {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.print-only {
+  display: none;
+}
+
+/* Report PDF: the browser's "Save as PDF" with RoboNuggets paper. Cream page, A4, every note open. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 0;
+    background: var(--bg);
+  }
+
+  .footer {
+    display: none;
+  }
+
+  html,
+  body {
+    background: var(--bg);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .shell,
+  .shell-practice {
+    max-width: none;
+    min-height: 0;
+    padding: 2mm 14mm 0;
+    gap: 16px;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .card,
+  .card-shadow,
+  .card-orange,
+  .dashed,
+  .review-item,
+  figure {
+    break-inside: avoid;
+  }
+
+  .review-summary {
+    list-style: none;
+  }
+
+  .review-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .print-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 8px;
   }
 }

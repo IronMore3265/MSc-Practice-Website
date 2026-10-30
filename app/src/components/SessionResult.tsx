@@ -1,12 +1,45 @@
 import Link from "@/components/NavLink";
 import { FigureCard } from "@/components/FigureCard";
 import { ResultActions } from "@/components/ResultActions";
-import { formatDuration, percent, type SessionPayload } from "@/lib/practice";
+import { SaveReportButton } from "@/components/SaveReportButton";
+import { formatDuration, percent, type SessionPayload, type SessionQuestion } from "@/lib/practice";
 
 export type EarlierAttempt = { score: number; max_score: number; started_at: string };
 
-// Results and weak topics (mockup screen 06), for a finished MCQ session. The answer key is open now,
-// so every question can be reviewed. "Save report PDF" arrives in Phase 8.
+// One question with your answer, the right answer and its note.
+function McqReview({ q }: { q: SessionQuestion }) {
+  const picked = q.options.find((o) => o.id === q.selected_option_id);
+  const right = q.options.find((o) => o.id === q.correct_option_id);
+  return (
+    <div className="stack-sm">
+      <p style={{ whiteSpace: "pre-line" }}>{q.text}</p>
+      {q.figure ? <FigureCard figure={q.figure} /> : null}
+      <p className="small">
+        <span className="label">Your answer</span>
+        <br />
+        {picked ? `${picked.label}. ${picked.text}` : "Not answered"}
+      </p>
+      {right && !q.is_correct ? (
+        <p className="small">
+          <span className="label label-orange">Correct answer</span>
+          <br />
+          {right.label}. {right.text}
+        </p>
+      ) : null}
+      <div className="dashed stack-sm">
+        <p className="label label-orange">
+          Why{right ? ` ${right.label}` : ""}
+          {q.source_page ? ` · Ch ${q.chapter_number} notes, p. ${q.source_page}` : ""}
+        </p>
+        <p className="small">{q.explanation_correct ?? "No explanation was saved for this question."}</p>
+        {picked && !q.is_correct && q.explanation_selected ? <p className="small muted">Your pick, {picked.label}: {q.explanation_selected}</p> : null}
+      </div>
+    </div>
+  );
+}
+
+// Results and weak topics (mockup screen 06), for a finished MCQ session. The answer key is open now, so every
+// question can be reviewed: the missed ones first, then every question with its note, which is also the PDF report.
 export function SessionResult({ payload, earlier }: { payload: SessionPayload; earlier: EarlierAttempt[] }) {
   const { session, questions } = payload;
   const total = questions.reduce((sum, q) => sum + q.marks, 0);
@@ -16,6 +49,8 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
   const missed = questions.filter((q) => !q.is_correct);
   const seconds =
     session.finished_at ? (new Date(session.finished_at).getTime() - new Date(session.started_at).getTime()) / 1000 : 0;
+  const day = (session.finished_at ?? session.started_at).slice(0, 10);
+  const courseLabel = session.course_short ?? session.course_name;
 
   const chapters = new Map<number, { got: number; of: number }>();
   for (const q of questions) {
@@ -30,10 +65,20 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
 
   return (
     <main className="shell shell-practice">
-      <div className="between">
+      <div className="print-only print-head">
+        <p className="label">
+          Exam Practice <span className="accent">Studio</span> · Report
+        </p>
+        <p className="label">
+          {courseLabel} · {session.exam_name}
+          {session.set_name ? ` · ${session.set_name}` : ""} · {day}
+        </p>
+      </div>
+
+      <div className="between no-print">
         <p className="label">Session result</p>
         <p className="label">
-          {session.exam_name} / {session.course_short ?? session.course_name}
+          {session.exam_name} / {courseLabel}
         </p>
       </div>
 
@@ -80,62 +125,56 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
           ))}
       </div>
 
-      <div className="stack-sm">
+      {/* The full list below repeats these, so the PDF leaves them out. */}
+      <div className="stack-sm no-print">
         <p className="label">{missed.length > 0 ? "Missed, review these" : "Nothing missed"}</p>
         {missed.length === 0 ? <p className="small muted">Every question was right. Try a new random set for fresh questions.</p> : null}
-        {missed.map((q) => {
-          const picked = q.options.find((o) => o.id === q.selected_option_id);
-          const right = q.options.find((o) => o.id === q.correct_option_id);
-          return (
-            <details key={q.id} className="card">
-              <summary className="review-summary">
-                <span className="row-name">
-                  Q{q.position + 1} (MCQ)
-                </span>
-                <span className="small muted">
-                  Chapter {q.chapter_number}
-                  {q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}
-                </span>
-              </summary>
-              <div className="stack-sm" style={{ marginTop: 10 }}>
-                <p style={{ whiteSpace: "pre-line" }}>{q.text}</p>
-                {q.figure ? <FigureCard figure={q.figure} /> : null}
-                <p className="small">
-                  <span className="label">Your answer</span>
-                  <br />
-                  {picked ? `${picked.label}. ${picked.text}` : "Not answered"}
-                </p>
-                {right ? (
-                  <p className="small">
-                    <span className="label label-orange">Correct answer</span>
-                    <br />
-                    {right.label}. {right.text}
-                  </p>
-                ) : null}
-                <div className="dashed stack-sm">
-                  <p className="label label-orange">
-                    Why{right ? ` ${right.label}` : ""}
-                    {q.source_page ? ` · Ch ${q.chapter_number} notes, p. ${q.source_page}` : ""}
-                  </p>
-                  <p className="small">{q.explanation_correct ?? "No explanation was saved for this question."}</p>
-                  {picked && q.explanation_selected ? <p className="small muted">Your pick, {picked.label}: {q.explanation_selected}</p> : null}
-                </div>
-              </div>
-            </details>
-          );
-        })}
+        {missed.map((q) => (
+          <details key={q.id} className="card">
+            <summary className="review-summary">
+              <span className="row-name">Q{q.position + 1} (MCQ)</span>
+              <span className="small muted">
+                Chapter {q.chapter_number}
+                {q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}
+              </span>
+            </summary>
+            <div style={{ marginTop: 10 }}>
+              <McqReview q={q} />
+            </div>
+          </details>
+        ))}
       </div>
 
       {earlier.length > 0 ? (
-        <div className="stack-sm">
+        <div className="stack-sm no-print">
           <p className="label">Earlier attempts on this set</p>
           <p className="small">{earlier.map((e) => `${e.score}/${e.max_score}`).join(", ")}</p>
         </div>
       ) : null}
 
-      <ResultActions setId={session.set_id} sessionId={session.id} chapterIds={chapterIdsOf(payload)} missed={missed.length} />
+      <div className="stack-sm no-print">
+        <ResultActions setId={session.set_id} sessionId={session.id} chapterIds={chapterIdsOf(payload)} missed={missed.length} />
+        <div>
+          <SaveReportButton fileName={`Report ${courseLabel} ${session.exam_name}${session.set_name ? ` ${session.set_name}` : ""} ${day}`} />
+        </div>
+      </div>
 
-      <p className="small muted">
+      <div className="stack">
+        <p className="label">All questions and notes</p>
+        {questions.map((q) => (
+          <div key={q.id} className="card stack-sm review-item">
+            <div className="between">
+              <span className="row-name">
+                Q{q.position + 1} · Chapter {q.chapter_number}
+              </span>
+              <span className={`chip ${q.is_correct ? "chip-right" : "chip-wrong"}`}>{q.is_correct ? "Right" : q.selected_option_id ? "Wrong" : "Skipped"}</span>
+            </div>
+            <McqReview q={q} />
+          </div>
+        ))}
+      </div>
+
+      <p className="small muted no-print">
         <Link href="/" className="btn-link">
           Back to the home screen
         </Link>

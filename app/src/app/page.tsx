@@ -1,6 +1,6 @@
 import Link from "@/components/NavLink";
 import { InvitePanel } from "@/components/InvitePanel";
-import { StartPractice, type CourseView } from "@/components/StartPractice";
+import { StartPractice, type SemesterView } from "@/components/StartPractice";
 import { requireActive } from "@/lib/auth";
 import { toInviteViews } from "@/lib/invites";
 import { percent } from "@/lib/practice";
@@ -22,15 +22,18 @@ export default async function HomePage() {
   const { profile } = await requireActive();
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }] = await Promise.all([
+  const [{ data: semesters }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }] = await Promise.all([
+    // Open semesters only, also for the admin, so the admin sees what students see.
     supabase
-      .from("course")
+      .from("semester")
       .select(
-        `id, name, short_name,
-         exam(id, name, weight, format, mcq_seconds, sort_order,
-           exam_chapter(chapter(id, number, title)),
-           question_set(id, name, chapter_id, created_at, question_set_item(question(chapter_id, kind))))`,
+        `id, name,
+         course(id, name, short_name, sort_order,
+           exam(id, name, weight, format, mcq_seconds, sort_order,
+             exam_chapter(chapter(id, number, title)),
+             question_set(id, name, chapter_id, created_at, question_set_item(question(chapter_id, kind, marks)))))`,
       )
+      .eq("is_open", true)
       .order("sort_order"),
     supabase.from("invite").select("*").eq("created_by", profile.id).order("created_at", { ascending: false }),
     // Finished full-set sessions (not retries of missed questions), newest first, for "Set 1 · 80%".
@@ -76,32 +79,56 @@ export default async function HomePage() {
     history.set(r.set_id, h);
   }
 
-  const courseViews: CourseView[] = (courses ?? []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    short: c.short_name,
-    exams: [...c.exam]
+  const semesterViews: SemesterView[] = (semesters ?? []).map((sem) => ({
+    id: sem.id,
+    name: sem.name,
+    courses: [...sem.course]
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((e) => ({
-        id: e.id,
-        name: e.name,
-        weight: Number(e.weight),
-        format: e.format,
-        mcqSeconds: e.mcq_seconds,
-        chapters: e.exam_chapter.flatMap((ec) => (ec.chapter ? [ec.chapter] : [])).sort((a, b) => a.number - b.number),
-        sets: [...e.question_set]
-          .sort((a, b) => a.created_at.localeCompare(b.created_at))
-          .map((s) => {
-            const mcqByChapter: Record<string, number> = {};
-            const cqByChapter: Record<string, number> = {};
-            for (const item of s.question_set_item) {
-              if (!item.question) continue;
-              const bucket = item.question.kind === "mcq" ? mcqByChapter : item.question.kind === "cq" || item.question.kind === "problem" ? cqByChapter : null;
-              if (bucket) bucket[item.question.chapter_id] = (bucket[item.question.chapter_id] ?? 0) + 1;
-            }
-            const h = history.get(s.id);
-            return { id: s.id, name: s.name, chapterId: s.chapter_id, mcqByChapter, cqByChapter, attempts: h?.attempts ?? 0, cqAttempts: h?.cqAttempts ?? 0, lastPercent: h?.lastPercent ?? null };
-          }),
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        short: c.short_name,
+        exams: [...c.exam]
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((e) => ({
+            id: e.id,
+            name: e.name,
+            weight: Number(e.weight),
+            format: e.format,
+            mcqSeconds: e.mcq_seconds,
+            chapters: e.exam_chapter.flatMap((ec) => (ec.chapter ? [ec.chapter] : [])).sort((a, b) => a.number - b.number),
+            sets: [...e.question_set]
+              .sort((a, b) => a.created_at.localeCompare(b.created_at))
+              .map((s) => {
+                const mcqByChapter: Record<string, number> = {};
+                const cqByChapter: Record<string, number> = {};
+                const mcqMarksByChapter: Record<string, number> = {};
+                const cqMarksByChapter: Record<string, number> = {};
+                for (const item of s.question_set_item) {
+                  if (!item.question) continue;
+                  const { kind, chapter_id: ch, marks } = item.question;
+                  const isMcq = kind === "mcq";
+                  if (!isMcq && kind !== "cq" && kind !== "problem") continue;
+                  const count = isMcq ? mcqByChapter : cqByChapter;
+                  const sum = isMcq ? mcqMarksByChapter : cqMarksByChapter;
+                  count[ch] = (count[ch] ?? 0) + 1;
+                  sum[ch] = (sum[ch] ?? 0) + marks;
+                }
+                const h = history.get(s.id);
+                return {
+                  id: s.id,
+                  name: s.name,
+                  chapterId: s.chapter_id,
+                  mcqByChapter,
+                  cqByChapter,
+                  mcqMarksByChapter,
+                  cqMarksByChapter,
+                  attempts: h?.attempts ?? 0,
+                  cqAttempts: h?.cqAttempts ?? 0,
+                  lastPercent: h?.lastPercent ?? null,
+                };
+              }),
+          })),
       })),
   }));
 
@@ -130,7 +157,7 @@ export default async function HomePage() {
         <h1 className="title">
           Pick your <span className="accent">Exam</span>
         </h1>
-        <p className="muted">Hi {profile.name}. Pick the course first. Each course has its own exam pattern.</p>
+        <p className="muted">Hi {profile.name}. Pick the semester and course first. Each course has its own exam pattern.</p>
       </div>
 
       {openSession ? (
@@ -144,9 +171,13 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      <StartPractice courses={courseViews} cap={{ used: gradesToday ?? 0, limit: profile.daily_cap }} />
-
-      <InvitePanel invites={toInviteViews(invites ?? [])} limit={isAdmin ? null : profile.invite_limit} />
+      {/* Laptop: picker on the left, invites on the right. Phone: one column. */}
+      <div className="dash-grid">
+        <StartPractice semesters={semesterViews} cap={{ used: gradesToday ?? 0, limit: profile.daily_cap }} />
+        <aside className="dash-side">
+          <InvitePanel invites={toInviteViews(invites ?? [])} limit={isAdmin ? null : profile.invite_limit} />
+        </aside>
+      </div>
 
       <p className="label footer">Exam Practice Studio</p>
     </main>

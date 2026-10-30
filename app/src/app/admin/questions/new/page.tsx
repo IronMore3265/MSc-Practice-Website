@@ -1,5 +1,6 @@
 import Link from "@/components/NavLink";
 import { QuestionEditor } from "@/components/QuestionEditor";
+import { adminCourses } from "@/lib/courses";
 import { createClient } from "@/lib/supabase/server";
 import { saveQuestion } from "../actions";
 
@@ -15,7 +16,7 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
   const sp = await searchParams;
   const supabase = await createClient();
 
-  const { data: courses } = await supabase.from("course").select("id, name, short_name").order("sort_order");
+  const courses = await adminCourses(supabase);
   const { data: chapters } = await supabase.from("chapter").select("id, course_id, number, title").order("number");
   const chapter = (chapters ?? []).find((c) => c.id === sp.chapter);
   const kind = KINDS.find((k) => k.value === sp.kind)?.value;

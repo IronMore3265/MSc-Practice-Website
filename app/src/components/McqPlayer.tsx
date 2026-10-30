@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FigureCard } from "@/components/FigureCard";
+import { ChevronLeft, ChevronRight } from "@/components/Icons";
 import { formatClock, type AnswerResult, type SessionPayload, type SessionQuestion } from "@/lib/practice";
 
 type Props = { initial: SessionPayload };
@@ -119,6 +120,10 @@ export function McqPlayer({ initial }: Props) {
     else setIndex((i) => i + 1);
   }
 
+  function move(step: -1 | 1) {
+    setIndex((i) => Math.min(questions.length - 1, Math.max(0, i + step)));
+  }
+
   async function report(question: SessionQuestion) {
     setReportState((s) => ({ ...s, [question.id]: "sending" }));
     try {
@@ -141,7 +146,7 @@ export function McqPlayer({ initial }: Props) {
     }
   }
 
-  // Keyboard on laptops: A to D pick an option, Enter or N goes on. The handler is renewed after every render.
+  // Keyboard on laptops: A to D pick an option, the arrow keys move, Enter or N goes on. The handler is renewed after every render.
   const keyHandler = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     keyHandler.current = (e) => {
@@ -153,6 +158,9 @@ export function McqPlayer({ initial }: Props) {
       const option = q.options.find((o) => o.label === key);
       if (option && !q.answered) {
         void choose(q, option.id);
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        move(e.key === "ArrowLeft" ? -1 : 1);
       } else if ((key === "ENTER" || key === "N") && q.answered && !busy) {
         e.preventDefault();
         next();
@@ -260,9 +268,20 @@ export function McqPlayer({ initial }: Props) {
             Report question
           </button>
         )}
-        <button type="button" className="btn btn-primary" disabled={busy || expired || (!q.answered && !isLast)} onClick={next}>
-          {isLast ? "Finish" : "Next question"}
-        </button>
+        <div className="nav-buttons">
+          <button type="button" className="btn btn-icon" aria-label="Previous question" title="Previous question" disabled={index === 0} onClick={() => move(-1)}>
+            <ChevronLeft />
+          </button>
+          {isLast ? (
+            <button type="button" className="btn btn-primary" disabled={busy || expired} onClick={next}>
+              Finish
+            </button>
+          ) : (
+            <button type="button" className={`btn btn-icon${q.answered ? " btn-primary" : ""}`} aria-label="Next question" title="Next question" onClick={() => move(1)}>
+              <ChevronRight />
+            </button>
+          )}
+        </div>
       </div>
 
       {reportOpen && reportState[q.id] !== "sent" ? (
@@ -291,7 +310,7 @@ export function McqPlayer({ initial }: Props) {
 
       <div className="between">
         <p className="small muted">
-          {answeredCount} of {questions.length} answered{!isLast && !q.answered ? ". Pick an option to go on." : ""}
+          {answeredCount} of {questions.length} answered
         </p>
         {!isLast ? (
           <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>

@@ -3,11 +3,12 @@ import { FeedbackCards } from "@/components/FeedbackCards";
 import { FigureCard } from "@/components/FigureCard";
 import { JobWatcher } from "@/components/JobWatcher";
 import { RetryJobButton } from "@/components/RetryJobButton";
+import { SaveReportButton } from "@/components/SaveReportButton";
 import type { CqSessionPayload } from "@/lib/cq";
 import { formatDuration, percent } from "@/lib/practice";
 
 // Results for a finished CQ session (mockup screen 06). Marks that are still being worked on show as such,
-// and the page refreshes by itself when they arrive. "Save report PDF" arrives in Phase 8.
+// and the page refreshes by itself when they arrive. "Save report PDF" prints every question with its feedback.
 export function CqResult({ payload }: { payload: CqSessionPayload }) {
   const { session, questions } = payload;
   const graded = questions.filter((q) => q.graded);
@@ -17,6 +18,8 @@ export function CqResult({ payload }: { payload: CqSessionPayload }) {
   const total = questions.reduce((sum, q) => sum + q.marks, 0);
   const score = graded.reduce((sum, q) => sum + (q.score ?? 0), 0);
   const seconds = session.finished_at ? (new Date(session.finished_at).getTime() - new Date(session.started_at).getTime()) / 1000 : 0;
+  const day = (session.finished_at ?? session.started_at).slice(0, 10);
+  const courseLabel = session.course_short ?? session.course_name;
 
   const chapters = new Map<number, { got: number; of: number }>();
   for (const q of graded) {
@@ -29,10 +32,19 @@ export function CqResult({ payload }: { payload: CqSessionPayload }) {
   return (
     <main className="shell shell-practice">
       <JobWatcher jobIds={pending.flatMap((q) => (q.job_id ? [q.job_id] : []))} />
-      <div className="between">
+      <div className="print-only print-head">
+        <p className="label">
+          Exam Practice <span className="accent">Studio</span> · Report
+        </p>
+        <p className="label">
+          {courseLabel} · {session.exam_name}
+          {session.set_name ? ` · ${session.set_name}` : ""} · {day}
+        </p>
+      </div>
+      <div className="between no-print">
         <p className="label">Session result</p>
         <p className="label">
-          {session.exam_name} / {session.course_short ?? session.course_name}
+          {session.exam_name} / {courseLabel}
         </p>
       </div>
 
@@ -110,7 +122,11 @@ export function CqResult({ payload }: { payload: CqSessionPayload }) {
         ))}
       </div>
 
-      <p className="small muted">
+      <div className="no-print">
+        <SaveReportButton fileName={`Report ${courseLabel} ${session.exam_name}${session.set_name ? ` ${session.set_name}` : ""} ${day}`} />
+      </div>
+
+      <p className="small muted no-print">
         <Link href="/" className="btn-link">
           Back to the home screen
         </Link>

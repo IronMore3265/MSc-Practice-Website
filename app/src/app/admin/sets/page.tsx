@@ -1,5 +1,6 @@
 import Link from "@/components/NavLink";
 import { ActionForm } from "@/components/ActionForm";
+import { adminCourses } from "@/lib/courses";
 import { createClient } from "@/lib/supabase/server";
 import { createAutoSet, createEmptySet } from "./actions";
 
@@ -9,7 +10,7 @@ export default async function SetsPage({ searchParams }: { searchParams: SearchP
   const sp = await searchParams;
   const supabase = await createClient();
 
-  const { data: courses } = await supabase.from("course").select("*").order("sort_order");
+  const courses = await adminCourses(supabase);
   const course = (courses ?? []).find((c) => c.id === sp.course) ?? courses?.[0];
   if (!course) return <p className="small muted">No courses yet. Add one on the Exams tab.</p>;
 
