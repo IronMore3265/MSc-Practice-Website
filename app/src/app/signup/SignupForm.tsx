@@ -43,7 +43,7 @@ export function SignupForm({ initialCode }: { initialCode: string }) {
         <label className="label" htmlFor="code">
           Invite code
         </label>
-        <input id="code" name="code" className="input" defaultValue={initialCode} placeholder="XXXX-XXXX-XXXX" autoComplete="off" autoCapitalize="characters" required />
+        <input id="code" name="code" className="input" defaultValue={initialCode} placeholder="XXXX-XXXX-XXXX" autoComplete="off" autoCapitalize="characters" />
       </div>
       <div className="field field-box">
         <label className="label" htmlFor="name">
