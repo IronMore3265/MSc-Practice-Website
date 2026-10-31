@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "@/components/NavLink";
 import { useRouter } from "next/navigation";
 
-type Props = { setId: string | null; sessionId: string; chapterIds: string[]; missed: number };
+type Props = { setId: string | null; sessionId: string; chapterIds: string[]; missed: number; children?: ReactNode };
 
-// Buttons under the result: retry only the missed questions, retry the whole set, or go back to the home screen.
-export function ResultActions({ setId, sessionId, chapterIds, missed }: Props) {
+// Buttons under the result, in one row: a new session from the home screen, retry only the missed questions,
+// retry the whole set, then anything passed in (Save report PDF).
+export function ResultActions({ setId, sessionId, chapterIds, missed, children }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +39,9 @@ export function ResultActions({ setId, sessionId, chapterIds, missed }: Props) {
   return (
     <div className="stack-sm">
       <div className="wrap">
+        <Link href="/" className="btn btn-primary">
+          New session
+        </Link>
         {setId && missed > 0 ? (
           <button type="button" className="btn" disabled={busy !== null} onClick={() => void start("missed")}>
             {busy === "missed" ? "Starting..." : `Retry missed (${missed})`}
@@ -48,9 +52,7 @@ export function ResultActions({ setId, sessionId, chapterIds, missed }: Props) {
             {busy === "set" ? "Starting..." : "Retry set"}
           </button>
         ) : null}
-        <Link href="/" className="btn btn-primary">
-          New session
-        </Link>
+        {children}
       </div>
       {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
     </div>

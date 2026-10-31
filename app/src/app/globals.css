@@ -1705,3 +1705,65 @@ body:has(.nav-pending) {
     display: none;
   }
 }
+
+/* Result screens: missed questions (MCQ) and every question (CQ) in a carousel instead of a long list. */
+.carousel:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 6px;
+  border-radius: var(--radius);
+}
+
+.carousel-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+}
+
+.carousel-strip .pill {
+  flex: none;
+}
+
+/* The full list of questions and notes: two columns on a laptop, one on a phone and in the PDF. */
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+/* Briefing before an exam: on a laptop its sections sit in two columns. */
+@media (min-width: 901px) {
+  .shell-exam .brief {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 36px;
+    align-items: start;
+  }
+  .shell-exam .brief > :first-child,
+  .shell-exam .brief > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .review-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media print {
+  .shell-exam {
+    max-width: none;
+    padding: 2mm 14mm 0;
+  }
+  .practice-grid,
+  .review-grid {
+    display: block;
+  }
+  .practice-grid > .practice-col + .practice-col,
+  .review-grid > * + * {
+    margin-top: 16px;
+  }
+}

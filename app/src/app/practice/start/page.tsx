@@ -46,7 +46,7 @@ export default async function StartPage({ searchParams }: { searchParams: Search
   const noun = section === "cq" ? "CQ" : "MCQ";
 
   return (
-    <main className="shell shell-practice">
+    <main className="shell shell-practice shell-exam">
       <div className="between">
         <p className="label">
           {exam.name} / {noun}

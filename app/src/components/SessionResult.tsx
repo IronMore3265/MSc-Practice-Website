@@ -1,6 +1,7 @@
 import Link from "@/components/NavLink";
 import { FigureCard } from "@/components/FigureCard";
 import { ResultActions } from "@/components/ResultActions";
+import { ReviewCarousel } from "@/components/ReviewCarousel";
 import { SaveReportButton } from "@/components/SaveReportButton";
 import { formatDuration, percent, type SessionPayload, type SessionQuestion } from "@/lib/practice";
 
@@ -61,10 +62,12 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
   }
 
   const last = earlier[0];
-  const delta = last ? percent(score, max) - percent(last.score, last.max_score) : null;
+  const samePaper = last ? last.max_score === max : false;
+  const delta = last ? (samePaper ? score - last.score : percent(score, max) - percent(last.score, last.max_score)) : null;
+  const unit = (n: number) => (samePaper ? `${n} point${n === 1 ? "" : "s"}` : `${n} percentage point${n === 1 ? "" : "s"}`);
 
   return (
-    <main className="shell shell-practice">
+    <main className="shell shell-practice shell-exam">
       <div className="print-only print-head">
         <p className="label">
           Exam Practice <span className="accent">Studio</span> · Report
@@ -86,81 +89,80 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
         Your <span className="accent">Score</span>
       </h1>
 
-      <div className="card-orange stack-sm">
-        <p className="score-big">
-          {score}
-          <span className="score-of">/{max}</span>
-        </p>
-        <p className="small muted">
-          MCQ {rightCount} of {questions.length} right · {formatDuration(seconds)}
-          {session.set_name ? ` · ${session.set_name}` : ""}
-          {session.retry_of ? " · retry of missed questions" : ""}
-        </p>
-        {delta !== null ? (
-          <p className="small">
-            {delta > 0
-              ? `Up ${delta} points from your last attempt on this set (${last.score}/${last.max_score}).`
-              : delta < 0
-                ? `Down ${Math.abs(delta)} points from your last attempt on this set (${last.score}/${last.max_score}).`
-                : `Same as your last attempt on this set (${last.score}/${last.max_score}).`}
-          </p>
-        ) : null}
-        {session.timed_out ? <p className="small label-orange">Time ran out. Unanswered questions count as missed.</p> : null}
-      </div>
+      <div className="practice-grid">
+        <div className="practice-col">
+          <div className="card-orange stack-sm">
+            <p className="score-big">
+              {score}
+              <span className="score-of">/{max}</span>
+            </p>
+            <p className="small muted">
+              MCQ {rightCount} of {questions.length} right · {formatDuration(seconds)}
+              {session.set_name ? ` · ${session.set_name}` : ""}
+              {session.retry_of ? " · retry of missed questions" : ""}
+            </p>
+            {delta !== null ? (
+              <p className="small">
+                {delta > 0
+                  ? `Up ${unit(delta)} from your last attempt on this set (${last.score}/${last.max_score}).`
+                  : delta < 0
+                    ? `Down ${unit(Math.abs(delta))} from your last attempt on this set (${last.score}/${last.max_score}).`
+                    : `Same as your last attempt on this set (${last.score}/${last.max_score}).`}
+              </p>
+            ) : null}
+            {session.timed_out ? <p className="small label-orange">Time ran out. Unanswered questions count as missed.</p> : null}
+          </div>
 
-      <div className="stack-sm">
-        <p className="label">Accuracy by chapter</p>
-        {[...chapters.entries()]
-          .sort(([a], [b]) => a - b)
-          .map(([number, c]) => (
-            <div key={number} className="stack-sm">
-              <div className="between small">
-                <span className="row-name">Chapter {number}</span>
-                <span>{percent(c.got, c.of)}%</span>
-              </div>
-              <div className="bar" role="img" aria-label={`Chapter ${number}: ${percent(c.got, c.of)} percent`}>
-                <div className="bar-fill" style={{ width: `${percent(c.got, c.of)}%` }} />
-              </div>
+          <div className="stack-sm">
+            <p className="label">Accuracy by chapter</p>
+            {[...chapters.entries()]
+              .sort(([a], [b]) => a - b)
+              .map(([number, c]) => (
+                <div key={number} className="stack-sm">
+                  <div className="between small">
+                    <span className="row-name">Chapter {number}</span>
+                    <span>{percent(c.got, c.of)}%</span>
+                  </div>
+                  <div className="bar" role="img" aria-label={`Chapter ${number}: ${percent(c.got, c.of)} percent`}>
+                    <div className="bar-fill" style={{ width: `${percent(c.got, c.of)}%` }} />
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {earlier.length > 0 ? (
+            <div className="stack-sm no-print">
+              <p className="label">Earlier attempts on this set</p>
+              <p className="small">{earlier.map((e) => `${e.score}/${e.max_score}`).join(", ")}</p>
             </div>
-          ))}
-      </div>
+          ) : null}
 
-      {/* The full list below repeats these, so the PDF leaves them out. */}
-      <div className="stack-sm no-print">
-        <p className="label">{missed.length > 0 ? "Missed, review these" : "Nothing missed"}</p>
-        {missed.length === 0 ? <p className="small muted">Every question was right. Try a new random set for fresh questions.</p> : null}
-        {missed.map((q) => (
-          <details key={q.id} className="card">
-            <summary className="review-summary">
-              <span className="row-name">Q{q.position + 1} (MCQ)</span>
-              <span className="small muted">
-                Chapter {q.chapter_number}
-                {q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}
-              </span>
-            </summary>
-            <div style={{ marginTop: 10 }}>
-              <McqReview q={q} />
-            </div>
-          </details>
-        ))}
-      </div>
-
-      {earlier.length > 0 ? (
-        <div className="stack-sm no-print">
-          <p className="label">Earlier attempts on this set</p>
-          <p className="small">{earlier.map((e) => `${e.score}/${e.max_score}`).join(", ")}</p>
+          <div className="no-print">
+            <ResultActions setId={session.set_id} sessionId={session.id} chapterIds={chapterIdsOf(payload)} missed={missed.length}>
+              <SaveReportButton fileName={`Report ${courseLabel} ${session.exam_name}${session.set_name ? ` ${session.set_name}` : ""} ${day}`} />
+            </ResultActions>
+          </div>
         </div>
-      ) : null}
 
-      <div className="stack-sm no-print">
-        <ResultActions setId={session.set_id} sessionId={session.id} chapterIds={chapterIdsOf(payload)} missed={missed.length} />
-        <div>
-          <SaveReportButton fileName={`Report ${courseLabel} ${session.exam_name}${session.set_name ? ` ${session.set_name}` : ""} ${day}`} />
+        {/* The full list below repeats these, so the PDF leaves them out. */}
+        <div className="practice-col no-print">
+          <ReviewCarousel
+            label={missed.length > 0 ? "Missed, review these" : "Nothing missed"}
+            empty="Every question was right. Try a new random set for fresh questions."
+            slides={missed.map((q) => ({
+              key: q.id,
+              title: `Q${q.position + 1}`,
+              meta: `Chapter ${q.chapter_number}${q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}`,
+              tag: { text: q.selected_option_id ? "Wrong" : "Skipped", tone: q.selected_option_id ? ("wrong" as const) : ("muted" as const) },
+              content: <McqReview q={q} />,
+            }))}
+          />
         </div>
       </div>
 
       <div className="stack">
         <p className="label">All questions and notes</p>
+        <div className="review-grid">
         {questions.map((q) => (
           <div key={q.id} className="card stack-sm review-item">
             <div className="between">
@@ -172,6 +174,7 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
             <McqReview q={q} />
           </div>
         ))}
+        </div>
       </div>
 
       <p className="small muted no-print">
