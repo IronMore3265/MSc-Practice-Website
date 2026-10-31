@@ -1363,19 +1363,30 @@ body:has(.nav-pending) {
 /* Dotted pixel icons in section labels, drawn to match the Doto lettering */
 .dot-icon {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   fill: var(--orange);
 }
 
-/* Section headings on home: bigger than .label, with the dotted icon in front */
+/* Section headings on home: a little bigger than .label, icon and text about the same height */
 .section-label {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13.5px;
+  gap: 8px;
+  font-size: 13px;
   letter-spacing: 0.14em;
   color: var(--ink);
+}
+
+/* Card titles in the side column stay small */
+.dash-side .section-label {
+  gap: 7px;
+  font-size: 11.5px;
+}
+
+.dash-side .dot-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* Leaderboard: Doto rank, name, sets, average. Your own row is orange. */

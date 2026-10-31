@@ -129,7 +129,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
 
   return (
     <div className="dash-grid">
-      <section className="stack" style={{ gap: 22 }}>
+      <section className="stack" style={{ gap: 34 }}>
         <div className="stack-sm">
           <p className="label section-label">
             <DotIcon name="semester" />
