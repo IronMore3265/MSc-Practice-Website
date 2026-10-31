@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "@/components/Icons";
 
 type Props = {
@@ -16,20 +15,15 @@ type Props = {
   onBack: () => void;
 };
 
-// Shown after "Start practice" and before the session exists, so the MCQ timer only starts on "Begin".
+// The exam screen before the session exists (/practice/start), so the MCQ timer only starts on "Begin".
 // The colour key uses the same classes as the practice screen, so it looks exactly like what comes next.
 export function ExamBriefing({ section, title, questionCount, marks, mcqSeconds, capLeft, capLimit, busy, onBegin, onBack }: Props) {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    box.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, []);
-
   const mcq = section === "mcq";
   const minutes = Math.round(mcqSeconds / 60);
   const noun = mcq ? "MCQ" : "CQ";
 
   return (
-    <div className="card-shadow stack brief" ref={box} role="region" aria-label="Before you start">
+    <div className="card-shadow stack brief" role="region" aria-label="Before you start">
       <div className="between">
         <p className="label label-orange">Before you start</p>
         <p className="label">{title}</p>
@@ -128,7 +122,7 @@ export function ExamBriefing({ section, title, questionCount, marks, mcqSeconds,
         <button type="button" className="btn" disabled={busy} onClick={onBack}>
           Back
         </button>
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={onBegin} autoFocus>
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={onBegin}>
           {busy ? "Starting..." : "Begin"}
         </button>
       </div>

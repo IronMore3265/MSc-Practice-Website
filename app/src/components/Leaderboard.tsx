@@ -60,7 +60,7 @@ export function Leaderboard({ examId, examName, joined: joinedAtLoad }: { examId
   return (
     <section className="card-shadow stack">
       <div className="stack-sm">
-        <p className="label">
+        <p className="label section-label">
           <DotIcon name="leaderboard" />
           Leaderboard · {examName}
         </p>

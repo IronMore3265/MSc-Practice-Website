@@ -94,3 +94,17 @@ export function setsForPick<T extends PickableSet>(sets: T[], picked: string[], 
 export function setLabel(set: PickableSet, picked: string[]) {
   return picked.length === 1 && set.chapterId ? set.name.replace(/^Ch \d+ /, "") : set.name;
 }
+
+// The start of today in Bangladesh time (UTC+6, no daylight saving), as a UTC timestamp. The daily AI grading cap resets then.
+export function startOfDhakaDay() {
+  const shifted = new Date(Date.now() + 6 * 3600_000);
+  shifted.setUTCHours(0, 0, 0, 0);
+  return new Date(shifted.getTime() - 6 * 3600_000).toISOString();
+}
+
+// The link from the home picker to the briefing page. No chapters means all chapters of the set.
+export function briefingHref(setId: string, section: "mcq" | "cq", chapterIds?: string[]) {
+  const q = new URLSearchParams({ set: setId, section });
+  if (chapterIds?.length) q.set("ch", chapterIds.join(","));
+  return `/practice/start?${q}`;
+}

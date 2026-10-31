@@ -45,7 +45,7 @@ export function InvitePanel({ invites, limit }: Props) {
     <section className="card-shadow stack">
       <div className="between">
         <div>
-          <p className="label">
+          <p className="label section-label">
             <DotIcon name="invite" />
             Invite a friend
           </p>

@@ -3,20 +3,13 @@ import { InvitePanel } from "@/components/InvitePanel";
 import { StartPractice, type SemesterView } from "@/components/StartPractice";
 import { requireActive } from "@/lib/auth";
 import { toInviteViews } from "@/lib/invites";
-import { percent } from "@/lib/practice";
+import { percent, startOfDhakaDay } from "@/lib/practice";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions";
 import { BrandTitle } from "@/components/BrandTitle";
 
 function nowIso() {
   return new Date().toISOString();
-}
-
-// The start of today in Bangladesh time (UTC+6, no daylight saving), as a UTC timestamp. The daily AI grading cap resets then.
-function startOfDhakaDay() {
-  const shifted = new Date(Date.now() + 6 * 3600_000);
-  shifted.setUTCHours(0, 0, 0, 0);
-  return new Date(shifted.getTime() - 6 * 3600_000).toISOString();
 }
 
 export default async function HomePage() {

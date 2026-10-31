@@ -1,4 +1,4 @@
-// The site name at the top of the page. A quill writes it, the words shrink away, and it writes them again.
+// The site name at the top of the page. A quill writes it, erases it going backward, and writes it again.
 // CSS only (globals.css, "Brand title"), so it works in server components. It holds still with reduced motion.
 export function BrandTitle() {
   return (

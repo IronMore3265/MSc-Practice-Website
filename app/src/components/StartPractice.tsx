@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
+import Link from "@/components/NavLink";
 import { useRouter } from "next/navigation";
 import { DotIcon } from "@/components/DotIcons";
-import { ExamBriefing } from "@/components/ExamBriefing";
 import { Leaderboard } from "@/components/Leaderboard";
-import { setLabel, setsForPick } from "@/lib/practice";
+import { briefingHref, setLabel, setsForPick } from "@/lib/practice";
 
 export type SetView = {
   id: string;
@@ -51,7 +51,7 @@ type Props = {
   leaderboard: { on: boolean; joined: boolean };
 };
 
-// Home screen (mockup screen 01): semester, course, exam, section, chapters, set, then Start and a briefing.
+// Home screen (mockup screen 01): semester, course, exam, section, chapters, set, then Start opens the briefing page.
 // MCQ and CQ run as separate sessions. "MCQ + CQ" in one go is not built yet, so it stays switched off.
 // Laptop: picker on the left, side column on the right. Phone: one column. The leaderboard follows the picked exam.
 export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
@@ -63,10 +63,8 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
   const [chapterPick, setChapterPick] = useState<Record<string, string[]>>({});
   const [setPick, setSetPick] = useState<Record<string, string>>({});
   const [sectionPick, setSectionPick] = useState<Record<string, Section>>({});
-  const [busy, setBusy] = useState<"start" | "new" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // The briefing belongs to one pick. Changing any picker above closes it.
-  const [briefFor, setBriefFor] = useState<string | null>(null);
   const [refreshing, startRefresh] = useTransition();
 
   const semester = semesters.find((s) => s.id === semesterId) ?? semesters[semesters.length - 1];
@@ -93,12 +91,8 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
   const set = exam ? (sets.find((s) => s.id === setPick[exam.id]) ?? sets.find((s) => s.attempts === 0) ?? sets[0]) : undefined;
   const counts = set ? (section === "cq" ? set.cqByChapter : set.mcqByChapter) : {};
   const questionCount = picked.reduce((sum, id) => sum + (counts[id] ?? 0), 0);
-  const marksByChapter = set ? (section === "cq" ? set.cqMarksByChapter : set.mcqMarksByChapter) : {};
-  const marks = picked.reduce((sum, id) => sum + (marksByChapter[id] ?? 0), 0);
   const noun = section === "cq" ? "CQ" : "MCQ";
   const capLeft = Math.max(0, cap.limit - cap.used);
-  const pickKey = `${set?.id}|${section}|${picked.join(",")}`;
-  const briefing = briefFor === pickKey;
 
   function toggleChapter(id: string) {
     if (!exam) return;
@@ -109,7 +103,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
 
   async function newSet() {
     if (!exam) return;
-    setBusy("new");
+    setBusy(true);
     setError(null);
     try {
       // With one chapter picked, the new set is for that chapter only.
@@ -129,30 +123,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
     } catch {
       setError("Network problem. Try again.");
     } finally {
-      setBusy(null);
-    }
-  }
-
-  async function start() {
-    if (!set) return;
-    setBusy("start");
-    setError(null);
-    try {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ set_id: set.id, section, chapter_ids: allPicked ? undefined : picked }),
-      });
-      const data = (await res.json()) as { id?: string; error?: string };
-      if (!res.ok || !data.id) {
-        setError(data.error ?? "Could not start the session.");
-        setBusy(null);
-        return;
-      }
-      router.push(`/practice/${data.id}`);
-    } catch {
-      setError("Network problem. Try again.");
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -160,7 +131,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
     <div className="dash-grid">
       <section className="stack" style={{ gap: 22 }}>
         <div className="stack-sm">
-          <p className="label">
+          <p className="label section-label">
             <DotIcon name="semester" />
             Semester
           </p>
@@ -180,7 +151,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
         </div>
 
         <div className="stack-sm">
-          <p className="label">
+          <p className="label section-label">
             <DotIcon name="course" />
             Course · {semester.name}
           </p>
@@ -202,7 +173,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
 
         {course ? (
           <div className="stack-sm">
-            <p className="label">
+            <p className="label section-label">
               <DotIcon name="exam" />
               Exam · {course.name}
             </p>
@@ -240,7 +211,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
 
         {exam && exam.format === "both" ? (
           <div className="stack-sm">
-            <p className="label">
+            <p className="label section-label">
               <DotIcon name="section" />
               Section · {exam.name} has both
             </p>
@@ -262,7 +233,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
         {exam ? (
           <>
             <div className="stack-sm">
-              <p className="label">
+              <p className="label section-label">
                 <DotIcon name="chapters" />
                 Chapters · from the {exam.name} syllabus
               </p>
@@ -288,7 +259,7 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
             </div>
 
             <div className="stack-sm">
-              <p className="label">
+              <p className="label section-label">
                 <DotIcon name="set" />
                 Set
               </p>
@@ -306,8 +277,8 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
                     {s.lastPercent !== null ? ` · ${s.lastPercent}%` : ""}
                   </button>
                 ))}
-                <button type="button" className="pill" disabled={busy !== null || refreshing} onClick={() => void newSet()}>
-                  {busy === "new" || refreshing ? "Making a set..." : "+ New random set"}
+                <button type="button" className="pill" disabled={busy || refreshing} onClick={() => void newSet()}>
+                  {busy || refreshing ? "Making a set..." : "+ New random set"}
                 </button>
               </div>
               {sets.length === 0 ? <p className="small muted">{allPicked ? "This exam has" : "The chapters you picked have"} no sets yet. Make a random one to start.</p> : null}
@@ -323,27 +294,18 @@ export function StartPractice({ semesters, cap, side, leaderboard }: Props) {
 
             {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
 
-            {briefing ? (
-              <ExamBriefing
-                section={section}
-                title={`${exam.name} / ${noun}${set ? ` · ${setLabel(set, picked)}` : ""}`}
-                questionCount={questionCount}
-                marks={marks}
-                mcqSeconds={exam.mcqSeconds}
-                capLeft={capLeft}
-                capLimit={cap.limit}
-                busy={busy === "start"}
-                onBegin={() => void start()}
-                onBack={() => setBriefFor(null)}
-              />
-            ) : (
-              <div className="between">
-                <p className="label">{timerLabel(exam, section)}</p>
-                <button type="button" className="btn btn-primary" disabled={!set || questionCount === 0 || busy !== null} onClick={() => setBriefFor(pickKey)}>
+            <div className="between">
+              <p className="label">{timerLabel(exam, section)}</p>
+              {set && questionCount > 0 && !busy ? (
+                <Link href={briefingHref(set.id, section, allPicked ? undefined : picked)} className="btn btn-primary">
+                  Start practice
+                </Link>
+              ) : (
+                <button type="button" className="btn btn-primary" disabled>
                   Start practice
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             {section === "cq" ? (
               <p className="small muted">
                 Each CQ is marked by AI and uses one of your daily gradings. {capLeft} of {cap.limit} left today.
