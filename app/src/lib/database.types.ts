@@ -41,6 +41,12 @@ export type Database = {
           },
         ];
       };
+      app_setting: {
+        Row: { id: number; leaderboard_on: boolean; updated_at: string };
+        Insert: { id?: number; leaderboard_on?: boolean; updated_at?: string };
+        Update: { id?: number; leaderboard_on?: boolean; updated_at?: string };
+        Relationships: [];
+      };
       semester: {
         Row: { created_at: string; id: string; is_open: boolean; name: string; sort_order: number };
         Insert: { created_at?: string; id?: string; is_open?: boolean; name: string; sort_order?: number };
@@ -618,6 +624,7 @@ export type Database = {
           id: string;
           invite_limit: number;
           invited_by: string | null;
+          leaderboard_since: string | null;
           name: string;
           role: Database["public"]["Enums"]["user_role"];
           status: Database["public"]["Enums"]["user_status"];
@@ -631,6 +638,7 @@ export type Database = {
           id: string;
           invite_limit?: number;
           invited_by?: string | null;
+          leaderboard_since?: string | null;
           name: string;
           role?: Database["public"]["Enums"]["user_role"];
           status?: Database["public"]["Enums"]["user_status"];
@@ -644,6 +652,7 @@ export type Database = {
           id?: string;
           invite_limit?: number;
           invited_by?: string | null;
+          leaderboard_since?: string | null;
           name?: string;
           role?: Database["public"]["Enums"]["user_role"];
           status?: Database["public"]["Enums"]["user_status"];
@@ -871,6 +880,14 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      exam_leaderboard: {
+        Args: { p_exam_id: string };
+        Returns: { rank: number; name: string; avg_percent: number; sessions: number; is_me: boolean }[];
+      };
+      set_leaderboard_opt_in: {
+        Args: { p_on: boolean };
+        Returns: string | null;
+      };
       claim_next_job: {
         Args: Record<PropertyKey, never>;
         Returns: Json;

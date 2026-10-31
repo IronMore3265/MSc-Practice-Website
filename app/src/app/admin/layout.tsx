@@ -17,7 +17,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
       <AdminTabs />
       {children}
-      <p className="label footer">Exam Practice Studio</p>
     </main>
   );
 }

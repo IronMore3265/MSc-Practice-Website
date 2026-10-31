@@ -2,6 +2,7 @@ import Link from "@/components/NavLink";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { SignupForm } from "./SignupForm";
+import { BrandTitle } from "@/components/BrandTitle";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
   const session = await getSession();
@@ -11,7 +12,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
   return (
     <main className="shell">
       <div className="between">
-        <span className="label">Exam Practice Studio</span>
+        <BrandTitle />
         <span className="label">Create account</span>
       </div>
 
@@ -29,8 +30,6 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           Back to sign in
         </Link>
       </div>
-
-      <p className="label footer">Exam Practice Studio</p>
     </main>
   );
 }

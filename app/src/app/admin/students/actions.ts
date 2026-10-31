@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/action-state";
 
 // Student management. Profile rows cannot be edited from the browser at all (no update grant),
@@ -66,4 +67,17 @@ export async function resetStudentPassword(_prev: ActionState, form: FormData): 
   const { error } = await db.auth.admin.updateUserById(id, { password });
   if (error) return bad(error.code === "weak_password" ? error.message : "Could not reset the password.");
   return done("Password changed. Tell the student the new password.");
+}
+
+// Switch the leaderboard on or off for everyone. Students still choose to join it themselves.
+export async function setLeaderboard(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const on = String(form.get("on") ?? "") === "true";
+  const supabase = await createClient();
+  const { error } = await supabase.from("app_setting").update({ leaderboard_on: on, updated_at: new Date().toISOString() }).eq("id", 1);
+  if (error) return bad("Could not change the leaderboard.");
+
+  revalidatePath("/admin/students");
+  revalidatePath("/");
+  return done(on ? "The leaderboard is on." : "The leaderboard is off.");
 }

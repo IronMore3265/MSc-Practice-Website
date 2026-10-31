@@ -518,8 +518,6 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
           ) : null}
         </div>
       </div>
-
-      <p className="label footer">Exam Practice Studio</p>
     </main>
   );
 }

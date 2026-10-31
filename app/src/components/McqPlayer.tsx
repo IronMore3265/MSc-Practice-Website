@@ -318,8 +318,6 @@ export function McqPlayer({ initial }: Props) {
           </button>
         ) : null}
       </div>
-
-      <p className="label footer">Exam Practice Studio</p>
     </main>
   );
 }

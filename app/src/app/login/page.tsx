@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { getSession } from "@/lib/auth";
 import { signIn } from "./actions";
+import { BrandTitle } from "@/components/BrandTitle";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ created?: string }> }) {
   const session = await getSession();
@@ -12,7 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="shell">
       <div className="between">
-        <span className="label">Exam Practice Studio</span>
+        <BrandTitle />
         <span className="label">Sign in</span>
       </div>
 
@@ -69,8 +70,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Admin? Go to <Link href="/admin">/admin</Link>
         </span>
       </div>
-
-      <p className="label footer">Exam Practice Studio</p>
     </main>
   );
 }

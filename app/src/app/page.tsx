@@ -6,6 +6,7 @@ import { toInviteViews } from "@/lib/invites";
 import { percent } from "@/lib/practice";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions";
+import { BrandTitle } from "@/components/BrandTitle";
 
 function nowIso() {
   return new Date().toISOString();
@@ -22,7 +23,7 @@ export default async function HomePage() {
   const { profile } = await requireActive();
   const supabase = await createClient();
 
-  const [{ data: semesters }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }] = await Promise.all([
+  const [{ data: semesters }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }, { data: setting }] = await Promise.all([
     // Open semesters only, also for the admin, so the admin sees what students see.
     supabase
       .from("semester")
@@ -63,6 +64,8 @@ export default async function HomePage() {
       .eq("kind", "grade")
       .neq("status", "failed")
       .gte("created_at", startOfDhakaDay()),
+    // The admin's leaderboard switch.
+    supabase.from("app_setting").select("leaderboard_on").eq("id", 1).maybeSingle(),
   ]);
 
   // MCQ history drives the "Set 1 · 80%" pills. CQ sessions are only counted, their marks arrive after AI grading.
@@ -138,7 +141,7 @@ export default async function HomePage() {
   return (
     <main className="shell shell-wide">
       <div className="between">
-        <span className="label">Exam Practice Studio</span>
+        <BrandTitle />
         <div className="wrap">
           {isAdmin ? (
             <Link href="/admin" className="pill">
@@ -171,15 +174,12 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      {/* Laptop: picker on the left, invites on the right. Phone: one column. */}
-      <div className="dash-grid">
-        <StartPractice semesters={semesterViews} cap={{ used: gradesToday ?? 0, limit: profile.daily_cap }} />
-        <aside className="dash-side">
-          <InvitePanel invites={toInviteViews(invites ?? [])} limit={isAdmin ? null : profile.invite_limit} />
-        </aside>
-      </div>
-
-      <p className="label footer">Exam Practice Studio</p>
+      <StartPractice
+        semesters={semesterViews}
+        cap={{ used: gradesToday ?? 0, limit: profile.daily_cap }}
+        side={<InvitePanel invites={toInviteViews(invites ?? [])} limit={isAdmin ? null : profile.invite_limit} />}
+        leaderboard={{ on: setting?.leaderboard_on ?? false, joined: profile.leaderboard_since !== null }}
+      />
     </main>
   );
 }

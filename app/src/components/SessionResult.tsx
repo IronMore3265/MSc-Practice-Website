@@ -179,7 +179,6 @@ export function SessionResult({ payload, earlier }: { payload: SessionPayload; e
           Back to the home screen
         </Link>
       </p>
-      <p className="label footer">Exam Practice Studio</p>
     </main>
   );
 }

@@ -2,7 +2,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import type { Profile } from "@/lib/database.types";
-import { resetStudentPassword, setStudentLimits, setStudentStatus } from "./actions";
+import { resetStudentPassword, setLeaderboard, setStudentLimits, setStudentStatus } from "./actions";
 
 const ORDER = { pending: 0, active: 1, disabled: 2 } as const;
 
@@ -15,7 +15,11 @@ function StatusChip({ profile }: { profile: Profile }) {
 export default async function StudentsPage() {
   const { profile: me } = await requireAdmin();
   const supabase = await createClient();
-  const { data } = await supabase.from("profile").select("*").order("created_at");
+  const [{ data }, { data: setting }] = await Promise.all([
+    supabase.from("profile").select("*").order("created_at"),
+    supabase.from("app_setting").select("leaderboard_on").eq("id", 1).maybeSingle(),
+  ]);
+  const leaderboardOn = setting?.leaderboard_on ?? false;
 
   const people = [...(data ?? [])].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
   const names = new Map(people.map((p) => [p.id, p.name]));
@@ -30,6 +34,20 @@ export default async function StudentsPage() {
         <p className="small muted">
           {pending > 0 ? `${pending} waiting for approval. ` : ""}Rejecting an account switches it off. You can switch it back on later.
         </p>
+      </div>
+
+      <div className="card-shadow between">
+        <div className="stack-sm">
+          <p className="label">
+            Leaderboard <span className={`chip${leaderboardOn ? " chip-done" : " chip-muted"}`}>{leaderboardOn ? "On" : "Off"}</span>
+          </p>
+          <p className="small muted">
+            Average MCQ % per exam on the home screen. Students join it themselves, and only sets they start after joining count.
+          </p>
+        </div>
+        <ActionForm action={setLeaderboard} submitLabel={leaderboardOn ? "Turn off" : "Turn on"} buttonClass={`btn btn-small${leaderboardOn ? "" : " btn-primary"}`}>
+          <input type="hidden" name="on" value={leaderboardOn ? "false" : "true"} />
+        </ActionForm>
       </div>
 
       <div className="card rows">

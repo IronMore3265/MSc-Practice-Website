@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DotIcon } from "@/components/DotIcons";
 import type { InviteView } from "@/lib/invites";
 
 type Props = {
@@ -44,7 +45,10 @@ export function InvitePanel({ invites, limit }: Props) {
     <section className="card-shadow stack">
       <div className="between">
         <div>
-          <p className="label label-orange">Invite a friend</p>
+          <p className="label">
+            <DotIcon name="invite" />
+            Invite a friend
+          </p>
           <p className="small muted">
             {limit === null ? `${unused} unused codes` : `${unused} of ${limit} unused codes`}. Each code works once and expires after 7 days.
           </p>
