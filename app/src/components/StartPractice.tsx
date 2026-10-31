@@ -67,11 +67,13 @@ export function StartPractice({ semesters, cap }: { semesters: SemesterView[]; c
   const allIds = exam ? exam.chapters.map((c) => c.id) : [];
   const picked = exam ? (chapterPick[exam.id] ?? allIds) : [];
   const allPicked = picked.length === allIds.length;
-  const sets = exam ? setsForPick(exam.sets, picked, allPicked) : [];
-  // Default set: the first one you have not tried yet, else the first one.
-  const set = exam ? (sets.find((s) => s.id === setPick[exam.id]) ?? sets.find((s) => s.attempts === 0) ?? sets[0]) : undefined;
   // An MCQ-only or CQ-only exam has one section. An exam with both lets you pick, MCQ first.
   const section: Section = exam ? (exam.format === "cq" ? "cq" : exam.format === "mcq" ? "mcq" : (sectionPick[exam.id] ?? "mcq")) : "mcq";
+  // Only the sets that hold questions for that section, so an MCQ-only set is not offered for CQ practice or the other way round.
+  const sectionSets = exam ? exam.sets.filter((s) => Object.keys(section === "cq" ? s.cqByChapter : s.mcqByChapter).length > 0) : [];
+  const sets = exam ? setsForPick(sectionSets, picked, allPicked) : [];
+  // Default set: the first one you have not tried yet, else the first one.
+  const set = exam ? (sets.find((s) => s.id === setPick[exam.id]) ?? sets.find((s) => s.attempts === 0) ?? sets[0]) : undefined;
   const counts = set ? (section === "cq" ? set.cqByChapter : set.mcqByChapter) : {};
   const questionCount = picked.reduce((sum, id) => sum + (counts[id] ?? 0), 0);
   const marksByChapter = set ? (section === "cq" ? set.cqMarksByChapter : set.mcqMarksByChapter) : {};
