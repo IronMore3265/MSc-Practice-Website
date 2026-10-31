@@ -10,24 +10,35 @@ export function GradingProgress({
   status,
   position,
   runningSince,
+  queuedSince = null,
+  paused = false,
   kind = "grade",
   problem = false,
 }: {
   status: JobStatus;
   position: number | null;
   runningSince: number | null;
+  queuedSince?: number | null; // when the job joined the queue, so the bar creeps while it waits
+  paused?: boolean; // no AI slot is switched on, so the job cannot start yet
   kind?: "grade" | "read";
   problem?: boolean; // a numerical problem: "Checking calculations" instead of "Checking grammar"
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (status !== "running") return;
+    if (status !== "running" && status !== "queued") return;
     const timer = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(timer);
   }, [status]);
 
   const steps = kind === "read" ? READ_STEPS : problem ? PROBLEM_STEPS : GRADE_STEPS;
-  const view = gradingProgress({ status, position, runningMs: runningSince ? now - runningSince : 0, steps: steps.length });
+  const view = gradingProgress({
+    status,
+    position,
+    runningMs: runningSince ? now - runningSince : 0,
+    queuedMs: queuedSince ? now - queuedSince : 0,
+    paused,
+    steps: steps.length,
+  });
 
   return (
     <div className="stack-sm">

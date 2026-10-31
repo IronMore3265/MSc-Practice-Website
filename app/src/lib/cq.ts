@@ -92,6 +92,7 @@ export type CqSessionPayload = {
 export type JobPoll = {
   job: { id: string; kind: string; status: JobStatus; attempts: number; created_at: string; started_at: string | null; finished_at: string | null };
   position: number | null;
+  paused?: boolean; // queued while no AI slot is switched on
   score?: number | null;
   feedback?: Feedback | null;
   transcription?: string | null; // a finished reading job carries the text and what it was unsure about
@@ -118,11 +119,27 @@ const EASE_SECONDS = 14; // the bar eases toward 88 percent over roughly this sc
 const CEILING = 88;
 
 // The bar is an estimate. Queue position and the start of the job are real, the middle steps are timed.
-export function gradingProgress(a: { status: JobStatus; position: number | null; runningMs: number; steps?: number }): ProgressView {
+// While queued the bar creeps from 3 toward 15 percent so it never looks frozen. When no AI slot is switched on
+// (paused), the note says so instead of a queue position that will not move.
+export function gradingProgress(a: {
+  status: JobStatus;
+  position: number | null;
+  runningMs: number;
+  queuedMs?: number;
+  paused?: boolean;
+  steps?: number;
+}): ProgressView {
   const last = a.steps ?? GRADE_STEPS.length;
   if (a.status === "done") return { percent: 100, doneSteps: last, activeStep: last, note: null };
   if (a.status === "queued") {
-    return { percent: 3, doneSteps: 0, activeStep: 0, note: a.position ? `Position in queue #${a.position}` : "Waiting for a free slot" };
+    const waited = Math.max(0, a.queuedMs ?? 0) / 1000;
+    const percent = Math.round(3 + 12 * (1 - Math.exp(-waited / 60)));
+    const note = a.paused
+      ? "The AI marker is offline right now. Your answer is saved and will be marked when it is back."
+      : a.position
+        ? `Position in queue #${a.position}`
+        : "Waiting for a free slot";
+    return { percent, doneSteps: 0, activeStep: 0, note };
   }
   if (a.status === "failed") return { percent: 0, doneSteps: 0, activeStep: 0, note: null };
   const seconds = Math.max(0, a.runningMs) / 1000;

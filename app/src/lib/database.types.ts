@@ -47,6 +47,27 @@ export type Database = {
         Update: { id?: number; leaderboard_on?: boolean; updated_at?: string };
         Relationships: [];
       };
+      notification: {
+        Row: { created_at: string; id: string; kind: string; read_at: string | null; session_run_id: string; updated_at: string; user_id: string };
+        Insert: { created_at?: string; id?: string; kind: string; read_at?: string | null; session_run_id: string; updated_at?: string; user_id: string };
+        Update: { created_at?: string; id?: string; kind?: string; read_at?: string | null; session_run_id?: string; updated_at?: string; user_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "notification_session_run_id_fkey";
+            columns: ["session_run_id"];
+            isOneToOne: false;
+            referencedRelation: "session_run";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notification_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profile";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       semester: {
         Row: { created_at: string; id: string; is_open: boolean; name: string; sort_order: number };
         Insert: { created_at?: string; id?: string; is_open?: boolean; name: string; sort_order?: number };

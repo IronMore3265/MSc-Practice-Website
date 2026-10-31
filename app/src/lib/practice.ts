@@ -85,14 +85,19 @@ type PickableSet = { name: string; chapterId: string | null };
 
 // The sets the home screen offers for the chapters picked. With All, the whole-exam sets. With chapters picked, the
 // sets made for those chapters, or, when they have none, the whole-exam sets (narrowed to the picked chapters later).
+// An exam with no whole-exam sets (the Midterm CQs come only in chapter sets) offers every chapter set for All.
 export function setsForPick<T extends PickableSet>(sets: T[], picked: string[], allPicked: boolean): T[] {
-  const chapterSets = allPicked ? [] : sets.filter((s) => s.chapterId !== null && picked.includes(s.chapterId));
-  return chapterSets.length ? chapterSets : sets.filter((s) => s.chapterId === null);
+  const whole = sets.filter((s) => s.chapterId === null);
+  if (allPicked) return whole.length ? whole : sets;
+  const chapterSets = sets.filter((s) => s.chapterId !== null && picked.includes(s.chapterId));
+  return chapterSets.length ? chapterSets : whole;
 }
 
-// With one chapter picked, "Ch 1 Set 2" reads as "Set 2": the chapter is already on screen.
+// With one chapter picked, "Ch 1 Set 2" reads as "Set 2": the chapter is already on screen. The MCQ or CQ pick is on
+// screen too, so "Ch 1 CQ Set 2" reads as "Ch 1 Set 2" (sets need distinct names, so CQ sets carry "CQ").
 export function setLabel(set: PickableSet, picked: string[]) {
-  return picked.length === 1 && set.chapterId ? set.name.replace(/^Ch \d+ /, "") : set.name;
+  const name = set.name.replace(/^(Ch \d+ )CQ /, "$1");
+  return picked.length === 1 && set.chapterId ? name.replace(/^Ch \d+ /, "") : name;
 }
 
 // The start of today in Bangladesh time (UTC+6, no daylight saving), as a UTC timestamp. The daily AI grading cap resets then.

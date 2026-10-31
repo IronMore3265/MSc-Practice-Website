@@ -1,9 +1,10 @@
 import Link from "@/components/NavLink";
 import { InvitePanel } from "@/components/InvitePanel";
+import { NotificationBell, type NotificationView } from "@/components/NotificationBell";
 import { StartPractice, type SemesterView } from "@/components/StartPractice";
 import { requireActive } from "@/lib/auth";
 import { toInviteViews } from "@/lib/invites";
-import { percent, startOfDhakaDay } from "@/lib/practice";
+import { percent, setLabel, startOfDhakaDay } from "@/lib/practice";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions";
 import { BrandTitle } from "@/components/BrandTitle";
@@ -12,11 +13,13 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const dhakaTime = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Dhaka", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
 export default async function HomePage() {
   const { profile } = await requireActive();
   const supabase = await createClient();
 
-  const [{ data: semesters }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }, { data: setting }] = await Promise.all([
+  const [{ data: semesters }, { data: invites }, { data: runs }, { data: open }, { count: gradesToday }, { data: setting }, { data: notes }] = await Promise.all([
     // Open semesters only, also for the admin, so the admin sees what students see.
     supabase
       .from("semester")
@@ -59,7 +62,35 @@ export default async function HomePage() {
       .gte("created_at", startOfDhakaDay()),
     // The admin's leaderboard switch.
     supabase.from("app_setting").select("leaderboard_on").eq("id", 1).maybeSingle(),
+    // Marked CQ answers and failed markings, newest first, for the bell.
+    supabase
+      .from("notification")
+      .select("id, kind, read_at, updated_at, session_run(id, score, max_score, finished_at, exam(name), question_set(name, chapter_id), attempt(graded_at))")
+      .eq("user_id", profile.id)
+      .order("updated_at", { ascending: false })
+      .limit(12),
   ]);
+
+  const notifications: NotificationView[] = (notes ?? []).flatMap((n) => {
+    const run = n.session_run;
+    if (!run) return [];
+    const total = run.attempt.length;
+    const marked = run.attempt.filter((a) => a.graded_at !== null).length;
+    const failed = n.kind === "grade_failed";
+    const setName = run.question_set ? setLabel({ name: run.question_set.name, chapterId: run.question_set.chapter_id }, []) : "CQ practice";
+    const score = marked === total && run.finished_at && run.score !== null && run.max_score ? ` · ${run.score}/${run.max_score}` : "";
+    return [
+      {
+        id: n.id,
+        sessionId: run.id,
+        failed,
+        unread: n.read_at === null,
+        title: `${run.exam?.name ?? "Practice"} · ${setName}`,
+        detail: failed ? "A marking failed. Open it to retry." : marked === total ? `All ${total} answers marked${score}` : `${marked} of ${total} answers marked`,
+        when: dhakaTime.format(new Date(n.updated_at)),
+      },
+    ];
+  });
 
   // MCQ history drives the "Set 1 · 80%" pills. CQ sessions are only counted, their marks arrive after AI grading.
   const history = new Map<string, { attempts: number; cqAttempts: number; lastPercent: number | null }>();
@@ -136,6 +167,7 @@ export default async function HomePage() {
       <div className="between">
         <BrandTitle />
         <div className="wrap">
+          <NotificationBell items={notifications} />
           {isAdmin ? (
             <Link href="/admin" className="pill">
               Admin

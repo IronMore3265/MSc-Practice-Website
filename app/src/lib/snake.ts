@@ -33,17 +33,18 @@ export function turn(current: Dir, wanted: Dir): Dir {
   return wanted === OPPOSITE[current] ? current : wanted;
 }
 
-// One tick. Hitting a wall or yourself ends the game. Eating food grows the snake and scores a point.
+// One tick. The walls wrap: leaving on the left comes back in on the right, and so on. Only running into your own
+// body ends the game. Eating food grows the snake and scores a point.
 export function step(state: SnakeState, wanted: Dir, rng: Rng = Math.random): SnakeState {
   if (state.over) return state;
   const dir = turn(state.dir, wanted);
   const head = state.snake[0];
-  const next = { x: head.x + DELTA[dir].x, y: head.y + DELTA[dir].y };
+  const wrap = (v: number) => (v + state.size) % state.size;
+  const next = { x: wrap(head.x + DELTA[dir].x), y: wrap(head.y + DELTA[dir].y) };
   const ate = next.x === state.food.x && next.y === state.food.y;
   // The tail moves away this tick unless we ate, so stepping onto the current tail is allowed.
   const body = ate ? state.snake : state.snake.slice(0, -1);
-  const hitWall = next.x < 0 || next.y < 0 || next.x >= state.size || next.y >= state.size;
-  if (hitWall || body.some((p) => p.x === next.x && p.y === next.y)) return { ...state, dir, over: true };
+  if (body.some((p) => p.x === next.x && p.y === next.y)) return { ...state, dir, over: true };
 
   const snake = [next, ...body];
   if (!ate) return { ...state, dir, snake };

@@ -10,6 +10,15 @@ test("queued: step one stays active with the queue position, the bar barely move
   assert.equal(p.activeStep, 0);
   assert.equal(p.note, "Position in queue #3");
   assert.equal(p.percent, 3);
+  const later = gradingProgress({ status: "queued", position: 3, runningMs: 0, queuedMs: 60_000 });
+  assert.ok(later.percent > 3 && later.percent <= 15);
+  const ages = gradingProgress({ status: "queued", position: 1, runningMs: 0, queuedMs: 60 * 60_000 });
+  assert.ok(ages.percent <= 15);
+});
+
+test("queued with no AI slot on says the marker is offline", () => {
+  const p = gradingProgress({ status: "queued", position: 1, runningMs: 0, paused: true });
+  assert.match(p.note ?? "", /offline/);
 });
 
 test("running: the bar eases toward 88 and never reaches it, steps finish in order", () => {
@@ -55,12 +64,17 @@ test("snake: moves one cell, grows and scores on food, cannot reverse", () => {
   assert.ok(!eat.snake.some((p) => p.x === eat.food.x && p.y === eat.food.y), "new food is not on the snake");
 });
 
-test("snake: hitting a wall or yourself ends the game, and a finished game stays finished", () => {
+test("snake: walls wrap to the other side, only your own body ends the game, and a finished game stays finished", () => {
   let s = newGame(6, () => 0);
   s = { ...s, food: { x: 0, y: 0 } };
-  for (let i = 0; i < 6 && !s.over; i++) s = step(s, "right");
-  assert.equal(s.over, true);
-  assert.equal(step(s, "up"), s);
+  for (let i = 0; i < 3; i++) s = step(s, "right");
+  assert.equal(s.over, false);
+  assert.deepEqual(s.snake[0], { x: 0, y: 3 }, "leaving on the right comes back on the left");
+  const top = step({ ...s, dir: "up", snake: [{ x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }] }, "up");
+  assert.deepEqual(top.snake[0], { x: 2, y: 5 }, "leaving at the top comes back at the bottom");
+  const bitten = step({ ...s, dir: "up", snake: [{ x: 2, y: 2 }, { x: 2, y: 3 }, { x: 1, y: 3 }, { x: 1, y: 2 }, { x: 1, y: 1 }] }, "left");
+  assert.equal(bitten.over, true);
+  assert.equal(step(bitten, "up"), bitten);
 
   const curl = { size: 8, dir: "right" as const, food: { x: 7, y: 7 }, score: 0, over: false, snake: [
     { x: 3, y: 3 }, { x: 3, y: 4 }, { x: 4, y: 4 }, { x: 4, y: 3 }, { x: 4, y: 2 }, { x: 3, y: 2 },

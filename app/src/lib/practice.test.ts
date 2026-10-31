@@ -48,6 +48,11 @@ test("setsForPick shows only whole-exam sets for All", () => {
   assert.deepEqual(names(setsForPick(sets, ["c1", "c2", "c3"], true)), ["Set 1", "Set 2"]);
 });
 
+test("setsForPick shows every chapter set for All when the exam has no whole-exam sets", () => {
+  const chapterOnly = sets.filter((s) => s.chapterId !== null);
+  assert.deepEqual(names(setsForPick(chapterOnly, ["c1", "c2"], true)), ["Ch 1 Set 1", "Ch 1 Set 2", "Ch 2 Set 1"]);
+});
+
 test("setsForPick shows only that chapter's sets for one chapter", () => {
   assert.deepEqual(names(setsForPick(sets, ["c1"], false)), ["Ch 1 Set 1", "Ch 1 Set 2"]);
   assert.deepEqual(names(setsForPick(sets, ["c2"], false)), ["Ch 2 Set 1"]);
@@ -66,4 +71,10 @@ test("setLabel drops the chapter prefix only when one chapter is picked", () => 
   assert.equal(setLabel(sets[2], ["c1"]), "Set 1");
   assert.equal(setLabel(sets[2], ["c1", "c2"]), "Ch 1 Set 1");
   assert.equal(setLabel(sets[0], ["c1", "c2"]), "Set 1");
+});
+
+test("setLabel drops CQ from chapter CQ set names", () => {
+  const cq = { name: "Ch 3 CQ Set 2", chapterId: "c3" };
+  assert.equal(setLabel(cq, ["c3"]), "Set 2");
+  assert.equal(setLabel(cq, ["c1", "c3"]), "Ch 3 Set 2");
 });

@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { runTick } from "@/lib/ai/router";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   if (!job) return NextResponse.json({ error: "Not found." }, { status: 404 });
 
   let position: number | null = null;
+  let paused = false;
   if (job.status === "queued") {
     const { count } = await supabase
       .from("job")
@@ -34,6 +36,10 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       .eq("status", "queued")
       .or(`priority.lt.${job.priority},and(priority.eq.${job.priority},created_at.lt.${job.created_at})`);
     position = (count ?? 0) + 1;
+    // Slots are admin-only rows, so the count is read on the server. With none switched on the job cannot move,
+    // and the screen says so instead of showing a queue position that never changes.
+    const { count: slots } = await createAdminClient().from("api_slot").select("id", { count: "exact", head: true }).eq("enabled", true);
+    paused = (slots ?? 0) === 0;
   }
   if (job.status === "queued" || job.status === "running") {
     // A running job also gets a tick, because a tick recovers jobs that got stuck.
@@ -61,5 +67,5 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
   const { payload: _payload, priority: _priority, ...visible } = job;
   void _payload;
   void _priority;
-  return NextResponse.json({ job: visible, position, ...(graded ?? {}), ...(read ?? {}) });
+  return NextResponse.json({ job: visible, position, paused, ...(graded ?? {}), ...(read ?? {}) });
 }

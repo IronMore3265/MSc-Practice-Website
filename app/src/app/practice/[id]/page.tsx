@@ -24,6 +24,8 @@ export default async function PracticePage({ params }: { params: Promise<{ id: s
   if (!run) notFound();
 
   if (run.sections.includes("cq")) {
+    // Opening the session settles its notifications in the bell. Row level security keeps this to your own rows.
+    await supabase.from("notification").update({ read_at: new Date().toISOString() }).eq("session_run_id", id).is("read_at", null);
     const { data, error } = await supabase.rpc("get_cq_session", { p_session: id });
     if (error || !data) notFound();
     const cq = data as unknown as CqSessionPayload;

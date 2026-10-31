@@ -177,7 +177,7 @@ export function McqPlayer({ initial }: Props) {
   const lowTime = left !== null && left <= 60;
 
   return (
-    <main className="shell shell-practice">
+    <main className="shell shell-practice shell-exam">
       <div className="between">
         <p className="label">
           {session.exam_name} / MCQ · Q {index + 1} / {questions.length}
@@ -206,117 +206,123 @@ export function McqPlayer({ initial }: Props) {
         })}
       </div>
 
-      <div className="card-orange stack-sm">
-        <p className="label label-orange">
-          {courseLabel}, Ch {q.chapter_number}
-          {q.marks > 1 ? ` · ${q.marks} marks` : ""}
-        </p>
-        <h1 className="q-text">{q.text}</h1>
-      </div>
-
-      {q.figure ? <FigureCard figure={q.figure} /> : null}
-
-      <div className="stack" role="group" aria-label="Options">
-        {q.options.map((o) => {
-          const picked = q.selected_option_id === o.id;
-          const isKey = q.revealed && q.correct_option_id === o.id;
-          let state = "";
-          if (q.answered) {
-            if (isKey) state = "opt-correct";
-            else if (picked) state = "opt-wrong";
-            else state = "opt-dim";
-          }
-          return (
-            <button
-              key={o.id}
-              type="button"
-              className={`opt ${state}`}
-              disabled={q.answered || busy || expired}
-              aria-pressed={picked}
-              onClick={() => void choose(q, o.id)}
-            >
-              <span className="opt-letter">{o.label}</span>
-              <span className="opt-text">{o.text}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {q.answered && q.revealed ? (
-        <div className="dashed stack-sm" role="status" ref={explanation}>
-          <p className="label label-orange">
-            {q.is_correct ? "Correct" : "Why " + (q.options.find((o) => o.id === q.correct_option_id)?.label ?? "")}
-            {q.source_page ? ` · Ch ${q.chapter_number} notes, p. ${q.source_page}` : ""}
-          </p>
-          <p className="small">{q.explanation_correct ?? "No explanation was saved for this question."}</p>
-          {!q.is_correct && q.explanation_selected ? (
-            <p className="small muted">
-              Your pick, {q.options.find((o) => o.id === q.selected_option_id)?.label}: {q.explanation_selected}
+      {/* Laptop: question and figure on the left, answering and moving on the right. Phone: one column. */}
+      <div className="practice-grid">
+        <div className="practice-col">
+          <div className="card-orange stack-sm">
+            <p className="label label-orange">
+              {courseLabel}, Ch {q.chapter_number}
+              {q.marks > 1 ? ` · ${q.marks} marks` : ""}
             </p>
+            <h1 className="q-text">{q.text}</h1>
+          </div>
+
+          {q.figure ? <FigureCard figure={q.figure} /> : null}
+        </div>
+        <div className="practice-col">
+          <div className="stack" role="group" aria-label="Options">
+            {q.options.map((o) => {
+              const picked = q.selected_option_id === o.id;
+              const isKey = q.revealed && q.correct_option_id === o.id;
+              let state = "";
+              if (q.answered) {
+                if (isKey) state = "opt-correct";
+                else if (picked) state = "opt-wrong";
+                else state = "opt-dim";
+              }
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  className={`opt ${state}`}
+                  disabled={q.answered || busy || expired}
+                  aria-pressed={picked}
+                  onClick={() => void choose(q, o.id)}
+                >
+                  <span className="opt-letter">{o.label}</span>
+                  <span className="opt-text">{o.text}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {q.answered && q.revealed ? (
+            <div className="dashed stack-sm" role="status" ref={explanation}>
+              <p className="label label-orange">
+                {q.is_correct ? "Correct" : "Why " + (q.options.find((o) => o.id === q.correct_option_id)?.label ?? "")}
+                {q.source_page ? ` · Ch ${q.chapter_number} notes, p. ${q.source_page}` : ""}
+              </p>
+              <p className="small">{q.explanation_correct ?? "No explanation was saved for this question."}</p>
+              {!q.is_correct && q.explanation_selected ? (
+                <p className="small muted">
+                  Your pick, {q.options.find((o) => o.id === q.selected_option_id)?.label}: {q.explanation_selected}
+                </p>
+              ) : null}
+            </div>
           ) : null}
-        </div>
-      ) : null}
 
-      {expired ? <p className="form-msg" data-ok="false">Time is up. Closing your session.</p> : null}
-      {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
+          {expired ? <p className="form-msg" data-ok="false">Time is up. Closing your session.</p> : null}
+          {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
 
-      <div className="between">
-        {reportState[q.id] === "sent" ? (
-          <span className="small muted">Reported. Thank you.</span>
-        ) : (
-          <button type="button" className="btn" onClick={() => setReportOpen((o) => !o)} aria-expanded={reportOpen}>
-            Report question
-          </button>
-        )}
-        <div className="nav-buttons">
-          <button type="button" className="btn btn-icon" aria-label="Previous question" title="Previous question" disabled={index === 0} onClick={() => move(-1)}>
-            <ChevronLeft />
-          </button>
-          {isLast ? (
-            <button type="button" className="btn btn-primary" disabled={busy || expired} onClick={next}>
-              Finish
-            </button>
-          ) : (
-            <button type="button" className={`btn btn-icon${q.answered ? " btn-primary" : ""}`} aria-label="Next question" title="Next question" onClick={() => move(1)}>
-              <ChevronRight />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {reportOpen && reportState[q.id] !== "sent" ? (
-        <div className="stack-sm">
-          <label className="label" htmlFor="report-note">What is wrong with it? (optional)</label>
-          <div className="field-box">
-            <input
-              id="report-note"
-              className="input input-sm"
-              maxLength={500}
-              value={reportNote}
-              onChange={(e) => setReportNote(e.target.value)}
-              placeholder="For example: the marked answer looks wrong"
-            />
+          <div className="between">
+            {reportState[q.id] === "sent" ? (
+              <span className="small muted">Reported. Thank you.</span>
+            ) : (
+              <button type="button" className="btn" onClick={() => setReportOpen((o) => !o)} aria-expanded={reportOpen}>
+                Report question
+              </button>
+            )}
+            <div className="nav-buttons">
+              <button type="button" className="btn btn-icon" aria-label="Previous question" title="Previous question" disabled={index === 0} onClick={() => move(-1)}>
+                <ChevronLeft />
+              </button>
+              {isLast ? (
+                <button type="button" className="btn btn-primary" disabled={busy || expired} onClick={next}>
+                  Finish
+                </button>
+              ) : (
+                <button type="button" className={`btn btn-icon${q.answered ? " btn-primary" : ""}`} aria-label="Next question" title="Next question" onClick={() => move(1)}>
+                  <ChevronRight />
+                </button>
+              )}
+            </div>
           </div>
-          <div className="wrap">
-            <button type="button" className="btn btn-small btn-primary" disabled={reportState[q.id] === "sending"} onClick={() => void report(q)}>
-              Send report
-            </button>
-            <button type="button" className="btn btn-small" onClick={() => setReportOpen(false)}>
-              Cancel
-            </button>
+
+          {reportOpen && reportState[q.id] !== "sent" ? (
+            <div className="stack-sm">
+              <label className="label" htmlFor="report-note">What is wrong with it? (optional)</label>
+              <div className="field-box">
+                <input
+                  id="report-note"
+                  className="input input-sm"
+                  maxLength={500}
+                  value={reportNote}
+                  onChange={(e) => setReportNote(e.target.value)}
+                  placeholder="For example: the marked answer looks wrong"
+                />
+              </div>
+              <div className="wrap">
+                <button type="button" className="btn btn-small btn-primary" disabled={reportState[q.id] === "sending"} onClick={() => void report(q)}>
+                  Send report
+                </button>
+                <button type="button" className="btn btn-small" onClick={() => setReportOpen(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="between">
+            <p className="small muted">
+              {answeredCount} of {questions.length} answered
+            </p>
+            {!isLast ? (
+              <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>
+                End session
+              </button>
+            ) : null}
           </div>
         </div>
-      ) : null}
-
-      <div className="between">
-        <p className="small muted">
-          {answeredCount} of {questions.length} answered
-        </p>
-        {!isLast ? (
-          <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>
-            End session
-          </button>
-        ) : null}
       </div>
     </main>
   );

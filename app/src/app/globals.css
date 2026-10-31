@@ -1587,3 +1587,121 @@ body:has(.nav-pending) {
     left: 100%;
   }
 }
+
+/* Exam screens (MCQ and CQ players): as wide as home on a laptop, question on the left, answering on the right. */
+.shell-exam {
+  max-width: 1180px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.practice-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.practice-col {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .shell-exam {
+    max-width: 640px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .practice-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+}
+
+/* Notifications: the bell next to Sign out and its panel. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.notif-wrap {
+  position: relative;
+}
+
+.notif-button {
+  gap: 6px;
+  padding: 4px 10px;
+}
+
+.notif-has {
+  border-color: var(--orange);
+}
+
+.notif-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.notif-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 30;
+  width: min(360px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.notif-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1.5px dashed var(--ink);
+  border-radius: var(--radius);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.notif-item:hover {
+  border-style: solid;
+}
+
+.notif-unread {
+  border: 2px solid var(--orange);
+}
+
+.notif-title {
+  font-weight: 600;
+}
+
+@media print {
+  .notif-wrap {
+    display: none;
+  }
+}

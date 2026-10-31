@@ -16,7 +16,7 @@ import { formatClock } from "@/lib/practice";
 const POLL_MS = 3000;
 const MAX_CHARS = 8000;
 
-type Live = { position: number | null; runningSince: number | null };
+type Live = { position: number | null; runningSince: number | null; queuedSince: number | null; paused: boolean };
 type Mode = "type" | "photo";
 type Wait = { qid: string; jobId: string; kind: "grade" | "read" };
 
@@ -94,7 +94,15 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
             if (kind === "read" && status === "done" && !data.transcription) continue; // same for the reading
             setLive((l) => {
               const prev = l[qid];
-              return { ...l, [qid]: { position: data.position, runningSince: status === "running" ? (prev?.runningSince ?? Date.now()) : null } };
+              return {
+                ...l,
+                [qid]: {
+                  position: data.position,
+                  runningSince: status === "running" ? (prev?.runningSince ?? Date.now()) : null,
+                  queuedSince: status === "queued" ? Date.parse(data.job.created_at) || Date.now() : null,
+                  paused: data.paused === true,
+                },
+              };
             });
             if (kind === "read") {
               if (status === "done" && data.transcription) {
@@ -287,7 +295,7 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
   const canSwitchMode = open && !q.transcribe_job_id && !busy;
 
   return (
-    <main className="shell shell-practice">
+    <main className="shell shell-practice shell-exam">
       <div className="between">
         <p className="label">
           {session.exam_name} / {isProblem ? "Problem" : "CQ"} · Q {index + 1} / {questions.length}
@@ -316,206 +324,212 @@ export function CqPlayer({ initial }: { initial: CqSessionPayload }) {
         })}
       </div>
 
-      <div className="card-orange stack-sm">
-        <p className="label label-orange">
-          {courseLabel}, Ch {q.chapter_number} · {q.marks} mark{q.marks === 1 ? "" : "s"}
-        </p>
-        <h1 className="q-text">{q.text}</h1>
-      </div>
+      {/* Laptop: question and figure on the left, answering and moving on the right. Phone: one column. */}
+      <div className="practice-grid">
+        <div className="practice-col">
+          <div className="card-orange stack-sm">
+            <p className="label label-orange">
+              {courseLabel}, Ch {q.chapter_number} · {q.marks} mark{q.marks === 1 ? "" : "s"}
+            </p>
+            <h1 className="q-text">{q.text}</h1>
+          </div>
 
-      {q.figure ? <FigureCard figure={q.figure} /> : null}
-
-      {open && !q.transcribe_job_id ? (
-        <div className="row-wrap" role="group" aria-label="How do you want to answer?">
-          <button type="button" className={`pill${mode === "type" ? " pill-active" : ""}`} aria-pressed={mode === "type"} disabled={!canSwitchMode} onClick={() => setModes((m) => ({ ...m, [q.id]: "type" }))}>
-            Type
-          </button>
-          <button type="button" className={`pill${mode === "photo" ? " pill-active" : ""}`} aria-pressed={mode === "photo"} disabled={!canSwitchMode} onClick={() => setModes((m) => ({ ...m, [q.id]: "photo" }))}>
-            Photo
-          </button>
+          {q.figure ? <FigureCard figure={q.figure} /> : null}
         </div>
-      ) : null}
-
-      {shown === "typing" ? (
-        <>
-          {isProblem ? (
-            <div className="stack-sm">
-              <p className="label">Your working</p>
-              <MathAnswerEditor
-                key={q.id}
-                value={draft}
-                disabled={busy}
-                onChange={(text) => setDrafts((d) => (d[q.id] === text || (!text && d[q.id] === undefined) ? d : { ...d, [q.id]: text }))}
-              />
+        <div className="practice-col">
+          {open && !q.transcribe_job_id ? (
+            <div className="row-wrap" role="group" aria-label="How do you want to answer?">
+              <button type="button" className={`pill${mode === "type" ? " pill-active" : ""}`} aria-pressed={mode === "type"} disabled={!canSwitchMode} onClick={() => setModes((m) => ({ ...m, [q.id]: "type" }))}>
+                Type
+              </button>
+              <button type="button" className={`pill${mode === "photo" ? " pill-active" : ""}`} aria-pressed={mode === "photo"} disabled={!canSwitchMode} onClick={() => setModes((m) => ({ ...m, [q.id]: "photo" }))}>
+                Photo
+              </button>
             </div>
-          ) : (
-            <div className="stack-sm">
-              <label className="label" htmlFor="cq-answer">
-                Your answer
-              </label>
-              <div className="field-box">
-                <textarea
-                  id="cq-answer"
-                  className="input textarea"
-                  style={{ minHeight: 200 }}
-                  maxLength={MAX_CHARS}
-                  value={draft}
-                  disabled={busy}
-                  onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
-                  onKeyDown={(e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") void submit(draft);
-                  }}
-                  placeholder="Type your answer the way you would write it in the exam."
-                />
-              </div>
-              <p className="small muted answer-count">
-                {draft.length} / {MAX_CHARS}
+          ) : null}
+
+          {shown === "typing" ? (
+            <>
+              {isProblem ? (
+                <div className="stack-sm">
+                  <p className="label">Your working</p>
+                  <MathAnswerEditor
+                    key={q.id}
+                    value={draft}
+                    disabled={busy}
+                    onChange={(text) => setDrafts((d) => (d[q.id] === text || (!text && d[q.id] === undefined) ? d : { ...d, [q.id]: text }))}
+                  />
+                </div>
+              ) : (
+                <div className="stack-sm">
+                  <label className="label" htmlFor="cq-answer">
+                    Your answer
+                  </label>
+                  <div className="field-box">
+                    <textarea
+                      id="cq-answer"
+                      className="input textarea"
+                      style={{ minHeight: 200 }}
+                      maxLength={MAX_CHARS}
+                      value={draft}
+                      disabled={busy}
+                      onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") void submit(draft);
+                      }}
+                      placeholder="Type your answer the way you would write it in the exam."
+                    />
+                  </div>
+                  <p className="small muted answer-count">
+                    {draft.length} / {MAX_CHARS}
+                  </p>
+                </div>
+              )}
+              <p className="small muted">
+                AI gradings used today: {cap.used} of {cap.limit}. {capReached ? "You have none left today, they reset at midnight Bangladesh time." : "Each submit uses one."}
               </p>
+              {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
+              <div className="between">
+                {!isLast ? (
+                  <button type="button" className="btn" disabled={busy} onClick={() => setIndex((i) => i + 1)}>
+                    Skip for now
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <button type="button" className="btn btn-primary" disabled={busy || draft.trim().length < 3 || draft.length > MAX_CHARS || capReached} onClick={() => void submit(draft)}>
+                  {busy ? "Sending..." : "Submit for marking"}
+                </button>
+              </div>
+            </>
+          ) : null}
+
+          {shown === "photos" ? (
+            <>
+              <PhotoAnswer
+                sessionId={session.id}
+                questionId={q.id}
+                attemptId={q.attempt_id}
+                photos={q.photos}
+                disabled={busy}
+                capReached={capReached}
+                onPhotos={(photos) => patch(q.id, { photos })}
+                onRead={() => void startReading()}
+              />
+              <p className="small muted">AI gradings used today: {cap.used} of {cap.limit}.</p>
+              {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
+              {!isLast ? (
+                <div>
+                  <button type="button" className="btn" disabled={busy} onClick={() => setIndex((i) => i + 1)}>
+                    Skip for now
+                  </button>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          {shown === "reading" ? (
+            <>
+              <div className="dashed stack-sm">
+                <GradingProgress kind="read" status={readJob} position={live[q.id]?.position ?? null} runningSince={live[q.id]?.runningSince ?? null} queuedSince={live[q.id]?.queuedSince ?? null} paused={live[q.id]?.paused ?? false} />
+                <p className="small muted">Your photos are being read. Next you can check the text before it is marked. You can go on to another question meanwhile.</p>
+              </div>
+              <SnakeGame />
+            </>
+          ) : null}
+
+          {shown === "readfail" ? (
+            <div className="dashed stack-sm">
+              <p className="label label-orange">Reading did not work</p>
+              <p className="small">The photos could not be read after three tries. Try again, or start over with clearer photos (good light, page flat, writing in dark ink). A failed reading does not use up a grading.</p>
+              <div className="row-wrap">
+                <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void retry(q.transcribe_job_id, q.id, "read")}>
+                  Try reading again
+                </button>
+                <button type="button" className="btn" disabled={busy} onClick={() => void startOver()}>
+                  Start over with new photos
+                </button>
+              </div>
+              {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
             </div>
-          )}
-          <p className="small muted">
-            AI gradings used today: {cap.used} of {cap.limit}. {capReached ? "You have none left today, they reset at midnight Bangladesh time." : "Each submit uses one."}
-          </p>
-          {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
+          ) : null}
+
+          {shown === "check" ? (
+            <TranscriptionCheck
+              key={`${q.id}-${q.transcribe_job_id}`}
+              attemptId={q.attempt_id}
+              photos={q.photos}
+              text={fix}
+              unsure={q.unsure}
+              problem={isProblem}
+              busy={busy}
+              error={error}
+              onText={(text) => setFixes((f) => ({ ...f, [q.id]: text }))}
+              onSubmit={() => void submit(fix)}
+              onStartOver={() => void startOver()}
+            />
+          ) : null}
+
+          {shown === "waiting" ? (
+            <>
+              <div className="dashed stack-sm">
+                <GradingProgress status={job} problem={isProblem} position={live[q.id]?.position ?? null} runningSince={live[q.id]?.runningSince ?? null} queuedSince={live[q.id]?.queuedSince ?? null} paused={live[q.id]?.paused ?? false} />
+                {q.graded ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setOpened((o) => ({ ...o, [q.id]: true }))}
+                  >
+                    Feedback ready, show me
+                  </button>
+                ) : (
+                  <p className="small muted">You can leave this page. The result is saved with this session. Or go on to the next question while this one is marked.</p>
+                )}
+              </div>
+              <SnakeGame />
+            </>
+          ) : null}
+
+          {shown === "failed" ? (
+            <div className="dashed stack-sm">
+              <p className="label label-orange">Marking did not work</p>
+              <p className="small">The AI could not mark this answer after three tries. Your answer is saved. Try again, it often works the second time.</p>
+              <div>
+                <button type="button" className="btn btn-primary" onClick={() => void retry(q.job_id, q.id, "grade")}>
+                  Retry marking
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {shown === "feedback" && q.feedback ? <FeedbackCards feedback={q.feedback} chapterNumber={q.chapter_number} answer={q.answer_text} /> : null}
+
+          {error && !open ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
+
           <div className="between">
-            {!isLast ? (
-              <button type="button" className="btn" disabled={busy} onClick={() => setIndex((i) => i + 1)}>
-                Skip for now
+            <p className="small muted">
+              {answeredCount} of {questions.length} answered
+            </p>
+            <div className="nav-buttons">
+              {open ? (
+                <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>
+                  End session
+                </button>
+              ) : null}
+              <button type="button" className="btn btn-icon" aria-label="Previous question" title="Previous question" disabled={busy || index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
+                <ChevronLeft />
               </button>
-            ) : (
-              <span />
-            )}
-            <button type="button" className="btn btn-primary" disabled={busy || draft.trim().length < 3 || draft.length > MAX_CHARS || capReached} onClick={() => void submit(draft)}>
-              {busy ? "Sending..." : "Submit for marking"}
-            </button>
-          </div>
-        </>
-      ) : null}
-
-      {shown === "photos" ? (
-        <>
-          <PhotoAnswer
-            sessionId={session.id}
-            questionId={q.id}
-            attemptId={q.attempt_id}
-            photos={q.photos}
-            disabled={busy}
-            capReached={capReached}
-            onPhotos={(photos) => patch(q.id, { photos })}
-            onRead={() => void startReading()}
-          />
-          <p className="small muted">AI gradings used today: {cap.used} of {cap.limit}.</p>
-          {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
-          {!isLast ? (
-            <div>
-              <button type="button" className="btn" disabled={busy} onClick={() => setIndex((i) => i + 1)}>
-                Skip for now
-              </button>
+              {!isLast ? (
+                <button type="button" className={`btn btn-icon${open ? "" : " btn-primary"}`} aria-label="Next question" title="Next question" disabled={busy} onClick={next}>
+                  <ChevronRight />
+                </button>
+              ) : !open ? (
+                <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>
+                  Finish session
+                </button>
+              ) : null}
             </div>
-          ) : null}
-        </>
-      ) : null}
-
-      {shown === "reading" ? (
-        <>
-          <div className="dashed stack-sm">
-            <GradingProgress kind="read" status={readJob} position={live[q.id]?.position ?? null} runningSince={live[q.id]?.runningSince ?? null} />
-            <p className="small muted">Your photos are being read. Next you can check the text before it is marked. You can go on to another question meanwhile.</p>
           </div>
-          <SnakeGame />
-        </>
-      ) : null}
-
-      {shown === "readfail" ? (
-        <div className="dashed stack-sm">
-          <p className="label label-orange">Reading did not work</p>
-          <p className="small">The photos could not be read after three tries. Try again, or start over with clearer photos (good light, page flat, writing in dark ink). A failed reading does not use up a grading.</p>
-          <div className="row-wrap">
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => void retry(q.transcribe_job_id, q.id, "read")}>
-              Try reading again
-            </button>
-            <button type="button" className="btn" disabled={busy} onClick={() => void startOver()}>
-              Start over with new photos
-            </button>
-          </div>
-          {error ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
-        </div>
-      ) : null}
-
-      {shown === "check" ? (
-        <TranscriptionCheck
-          key={`${q.id}-${q.transcribe_job_id}`}
-          attemptId={q.attempt_id}
-          photos={q.photos}
-          text={fix}
-          unsure={q.unsure}
-          problem={isProblem}
-          busy={busy}
-          error={error}
-          onText={(text) => setFixes((f) => ({ ...f, [q.id]: text }))}
-          onSubmit={() => void submit(fix)}
-          onStartOver={() => void startOver()}
-        />
-      ) : null}
-
-      {shown === "waiting" ? (
-        <>
-          <div className="dashed stack-sm">
-            <GradingProgress status={job} problem={isProblem} position={live[q.id]?.position ?? null} runningSince={live[q.id]?.runningSince ?? null} />
-            {q.graded ? (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setOpened((o) => ({ ...o, [q.id]: true }))}
-              >
-                Feedback ready, show me
-              </button>
-            ) : (
-              <p className="small muted">You can leave this page. The result is saved with this session. Or go on to the next question while this one is marked.</p>
-            )}
-          </div>
-          <SnakeGame />
-        </>
-      ) : null}
-
-      {shown === "failed" ? (
-        <div className="dashed stack-sm">
-          <p className="label label-orange">Marking did not work</p>
-          <p className="small">The AI could not mark this answer after three tries. Your answer is saved. Try again, it often works the second time.</p>
-          <div>
-            <button type="button" className="btn btn-primary" onClick={() => void retry(q.job_id, q.id, "grade")}>
-              Retry marking
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {shown === "feedback" && q.feedback ? <FeedbackCards feedback={q.feedback} chapterNumber={q.chapter_number} answer={q.answer_text} /> : null}
-
-      {error && !open ? <p className="form-msg" data-ok="false" role="alert">{error}</p> : null}
-
-      <div className="between">
-        <p className="small muted">
-          {answeredCount} of {questions.length} answered
-        </p>
-        <div className="nav-buttons">
-          {open ? (
-            <button type="button" className="btn-link small" disabled={busy} onClick={() => void finish()}>
-              End session
-            </button>
-          ) : null}
-          <button type="button" className="btn btn-icon" aria-label="Previous question" title="Previous question" disabled={busy || index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
-            <ChevronLeft />
-          </button>
-          {!isLast ? (
-            <button type="button" className={`btn btn-icon${open ? "" : " btn-primary"}`} aria-label="Next question" title="Next question" disabled={busy} onClick={next}>
-              <ChevronRight />
-            </button>
-          ) : !open ? (
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={next}>
-              Finish session
-            </button>
-          ) : null}
         </div>
       </div>
     </main>
