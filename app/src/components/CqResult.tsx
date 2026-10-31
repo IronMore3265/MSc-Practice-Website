@@ -53,61 +53,57 @@ export function CqResult({ payload }: { payload: CqSessionPayload }) {
         Your <span className="accent">Score</span>
       </h1>
 
-      <div className="practice-grid">
-        <div className="practice-col">
-          <div className="card-orange stack-sm">
-            <p className="score-big">
-              {score}
-              <span className="score-of">/{total}</span>
-            </p>
-            <p className="small muted">
-              CQ · {graded.length} of {questions.length} marked · {formatDuration(seconds)}
-              {session.set_name ? ` · ${session.set_name}` : ""}
-            </p>
-            {pending.length > 0 ? <p className="small label-orange">{pending.length} answer{pending.length === 1 ? " is" : "s are"} still being marked. This page updates by itself.</p> : null}
-            {failed.length > 0 ? <p className="small">{failed.length} answer{failed.length === 1 ? "" : "s"} could not be marked. Open it under Questions to retry.</p> : null}
-            {unanswered.length > 0 ? <p className="small muted">{unanswered.length} question{unanswered.length === 1 ? " was" : "s were"} not answered and count as zero.</p> : null}
-          </div>
+      <div className="card-orange stack-sm">
+        <p className="score-big">
+          {score}
+          <span className="score-of">/{total}</span>
+        </p>
+        <p className="small muted">
+          CQ · {graded.length} of {questions.length} marked · {formatDuration(seconds)}
+          {session.set_name ? ` · ${session.set_name}` : ""}
+        </p>
+        {pending.length > 0 ? <p className="small label-orange">{pending.length} answer{pending.length === 1 ? " is" : "s are"} still being marked. This page updates by itself.</p> : null}
+        {failed.length > 0 ? <p className="small">{failed.length} answer{failed.length === 1 ? "" : "s"} could not be marked. Open it under Questions to retry.</p> : null}
+        {unanswered.length > 0 ? <p className="small muted">{unanswered.length} question{unanswered.length === 1 ? " was" : "s were"} not answered and count as zero.</p> : null}
+      </div>
 
-          {chapters.size > 0 ? (
-            <div className="stack-sm">
-              <p className="label">Marks by chapter</p>
-              {[...chapters.entries()]
-                .sort(([a], [b]) => a - b)
-                .map(([number, c]) => (
-                  <div key={number} className="stack-sm">
-                    <div className="between small">
-                      <span className="row-name">Chapter {number}</span>
-                      <span>
-                        {c.got}/{c.of} · {percent(c.got, c.of)}%
-                      </span>
-                    </div>
-                    <div className="bar" role="img" aria-label={`Chapter ${number}: ${percent(c.got, c.of)} percent`}>
-                      <div className="bar-fill" style={{ width: `${percent(c.got, c.of)}%` }} />
-                    </div>
-                  </div>
-                ))}
-            </div>
-          ) : null}
-
-          <div className="no-print">
-            <SaveReportButton fileName={`Report ${courseLabel} ${session.exam_name}${session.set_name ? ` ${session.set_name}` : ""} ${day}`} />
-          </div>
+      {chapters.size > 0 ? (
+        <div className="stack-sm">
+          <p className="label">Marks by chapter</p>
+          {[...chapters.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([number, c]) => (
+              <div key={number} className="stack-sm">
+                <div className="between small">
+                  <span className="row-name">Chapter {number}</span>
+                  <span>
+                    {c.got}/{c.of} · {percent(c.got, c.of)}%
+                  </span>
+                </div>
+                <div className="bar" role="img" aria-label={`Chapter ${number}: ${percent(c.got, c.of)} percent`}>
+                  <div className="bar-fill" style={{ width: `${percent(c.got, c.of)}%` }} />
+                </div>
+              </div>
+            ))}
         </div>
+      ) : null}
 
-        <div className="practice-col no-print">
-          <ReviewCarousel
-            label="Questions"
-            empty="This session has no questions."
-            slides={questions.map((q) => ({
-              key: q.id,
-              title: `Q${q.position + 1}`,
-              meta: `Chapter ${q.chapter_number}${q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}`,
-              tag: markTag(q),
-              content: <CqReview q={q} />,
-            }))}
-          />
-        </div>
+      <div className="no-print">
+        <ReviewCarousel
+          label="Questions"
+          empty="This session has no questions."
+          slides={questions.map((q) => ({
+            key: q.id,
+            title: `Q${q.position + 1}`,
+            meta: `Chapter ${q.chapter_number}${q.seconds_spent !== null ? ` · ${formatDuration(q.seconds_spent)}` : ""}`,
+            tag: markTag(q),
+            content: <CqReview q={q} />,
+          }))}
+        />
+      </div>
+
+      <div className="no-print">
+        <SaveReportButton fileName={`Report ${courseLabel} ${session.exam_name}${session.set_name ? ` ${session.set_name}` : ""} ${day}`} />
       </div>
 
       <div className="stack-sm print-only">

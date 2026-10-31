@@ -6,11 +6,11 @@ import { ChevronLeft, ChevronRight } from "@/components/Icons";
 export type ReviewSlide = { key: string; title: string; meta: string; tag?: { text: string; tone: "right" | "wrong" | "muted" }; content: ReactNode };
 
 // One question at a time instead of a long list: chevrons, arrow keys or a swipe move between them, and the
-// numbered chips jump straight to one. Screen only; the printed report lists every question in full.
+// numbered chips (wrapping onto more rows as needed) jump straight to one. A right answer's chip is orange.
+// Screen only; the printed report lists every question in full.
 export function ReviewCarousel({ label, slides, empty }: { label: string; slides: ReviewSlide[]; empty: string }) {
   const [index, setIndex] = useState(0);
   const touchX = useRef<number | null>(null);
-  const strip = useRef<HTMLDivElement>(null);
 
   if (slides.length === 0) {
     return (
@@ -23,11 +23,7 @@ export function ReviewCarousel({ label, slides, empty }: { label: string; slides
 
   const i = Math.min(index, slides.length - 1);
   const slide = slides[i];
-  const go = (to: number) => {
-    const next = Math.max(0, Math.min(slides.length - 1, to));
-    setIndex(next);
-    strip.current?.children[next]?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-  };
+  const go = (to: number) => setIndex(Math.max(0, Math.min(slides.length - 1, to)));
 
   return (
     <section
@@ -62,9 +58,9 @@ export function ReviewCarousel({ label, slides, empty }: { label: string; slides
       </div>
 
       {slides.length > 1 ? (
-        <div className="carousel-strip" ref={strip} role="tablist" aria-label="Jump to a question">
+        <div className="carousel-strip" role="tablist" aria-label="Jump to a question">
           {slides.map((s, k) => (
-            <button key={s.key} type="button" role="tab" aria-selected={k === i} className={`pill${k === i ? " pill-active" : ""}`} onClick={() => go(k)}>
+            <button key={s.key} type="button" role="tab" aria-selected={k === i} className={`pill${k === i ? " pill-active" : s.tag?.tone === "right" ? " pill-right" : ""}`} onClick={() => go(k)}>
               {s.title}
             </button>
           ))}
